@@ -1,0 +1,29 @@
+/* Global baseline — mirrors the design's <helmet> atomics. */
+body {
+  margin: 0;
+  background: #f2ecdf;
+  font-family: 'Arimo', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: #2f5673;
+  text-decoration: none;
+}
+a:hover {
+  color: #b7472a;
+}
+
+::-webkit-scrollbar {
+  display: none;
+}
+
+input,
+textarea {
+  font-family: inherit;
+  outline: none;
+}
+input::placeholder,
+textarea::placeholder {
+  color: #6b6156;
+}
