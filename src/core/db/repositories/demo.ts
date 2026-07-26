@@ -40,7 +40,7 @@ async function rows<T extends Record<string, unknown>>(
   return Array.from(result) as unknown as T[];
 }
 
-function isSeedPersonId(value: string): value is PersonId {
+function isSeedPersonId(value: string): value is keyof typeof PEOPLE {
   return Object.prototype.hasOwnProperty.call(PEOPLE, value);
 }
 
@@ -55,7 +55,7 @@ function relativeTime(value: Date | string): string {
 export class DemoRepository {
   constructor(private readonly database: DemoDatabase) {}
 
-  async listPeople(): Promise<Person[]> {
+  async listPeople(viewerId?: string): Promise<Person[]> {
     const result = await rows<{
       id: string;
       display_name: string;
@@ -67,24 +67,26 @@ export class DemoRepository {
     }>(
       this.database,
       sql`select user_id as id, display_name, handle, initials, color, city, is_private
-          from profiles where user_id <> 'juno' order by display_name`,
+          from profiles
+          where user_id <> ${viewerId ?? 'juno'}
+            and (${viewerId ?? null}::text is null or not exists (
+              select 1 from blocks b
+              where (b.blocker_id = ${viewerId ?? null} and b.blocked_id = profiles.user_id)
+                 or (b.blocker_id = profiles.user_id and b.blocked_id = ${viewerId ?? null})
+            ))
+          order by display_name`,
     );
 
-    return result.flatMap((row) => {
-      if (!isSeedPersonId(row.id)) return [];
-      return [
-        {
-          id: row.id,
-          name: row.display_name,
-          handle: row.handle,
-          initials: row.initials,
-          color: row.color,
-          service: PEOPLE[row.id].service,
-          city: row.city,
-          private: row.is_private,
-        },
-      ];
-    });
+    return result.map((row) => ({
+      id: row.id as PersonId,
+      name: row.display_name,
+      handle: row.handle,
+      initials: row.initials,
+      color: row.color,
+      service: isSeedPersonId(row.id) ? PEOPLE[row.id].service : 'MyMusic',
+      city: row.city,
+      private: row.is_private,
+    }));
   }
 
   async findPersonByHandle(handle: string): Promise<Person | undefined> {
@@ -102,14 +104,14 @@ export class DemoRepository {
           from profiles where lower(handle) = lower(${handle}) and user_id <> 'juno' limit 1`,
     );
     const row = result[0];
-    if (!row || !isSeedPersonId(row.id)) return undefined;
+    if (!row) return undefined;
     return {
-      id: row.id,
+      id: row.id as PersonId,
       name: row.display_name,
       handle: row.handle,
       initials: row.initials,
       color: row.color,
-      service: PEOPLE[row.id].service,
+      service: isSeedPersonId(row.id) ? PEOPLE[row.id].service : 'MyMusic',
       city: row.city,
       private: row.is_private,
     };
@@ -162,7 +164,7 @@ export class DemoRepository {
         sql`select display_name, handle, bio, initials, color, city, is_private
             from profiles where user_id = ${viewerId} limit 1`,
       ),
-      this.listPeople(),
+      this.listPeople(viewerId),
       rows<{ followee_id: string; status: 'pending' | 'accepted' }>(
         this.database,
         sql`select followee_id, status from follows where follower_id = ${viewerId}`,
@@ -247,7 +249,28 @@ export class DemoRepository {
         sql`select w.id, w.author_id, w.text, t.title, a.name as artist, w.created_at
             from wall_posts w left join tracks t on t.id = w.track_id
             left join artists a on a.id = t.artist_id
-            where w.wall_owner_id = 'theok' order by w.created_at desc`,
+            join profiles owner on owner.user_id = w.wall_owner_id
+            where w.wall_owner_id = 'theok'
+              and (
+                w.wall_owner_id = ${viewerId}
+                or (
+                  not exists (
+                    select 1 from blocks b
+                    where (b.blocker_id = ${viewerId} and b.blocked_id = w.wall_owner_id)
+                       or (b.blocker_id = w.wall_owner_id and b.blocked_id = ${viewerId})
+                  )
+                  and (
+                    not owner.is_private
+                    or exists (
+                      select 1 from follows f
+                      where f.follower_id = ${viewerId}
+                        and f.followee_id = w.wall_owner_id
+                        and f.status = 'accepted'
+                    )
+                  )
+                )
+              )
+            order by w.created_at desc`,
       ),
       rows<{ id: string; name: string }>(
         this.database,
@@ -272,8 +295,27 @@ export class DemoRepository {
       ),
       rows<{ metadata: Record<string, unknown>; occurred_at: Date }>(
         this.database,
-        sql`select metadata, occurred_at from activity_events
-            order by occurred_at desc limit 4`,
+        sql`select e.metadata, e.occurred_at from activity_events e
+            left join profiles actor on actor.user_id = e.actor_id
+            where e.actor_id = ${viewerId}
+              or (
+                e.actor_id is not null
+                and not exists (
+                  select 1 from blocks b
+                  where (b.blocker_id = ${viewerId} and b.blocked_id = e.actor_id)
+                     or (b.blocker_id = e.actor_id and b.blocked_id = ${viewerId})
+                )
+                and (
+                  not actor.is_private
+                  or exists (
+                    select 1 from follows f
+                    where f.follower_id = ${viewerId}
+                      and f.followee_id = e.actor_id
+                      and f.status = 'accepted'
+                  )
+                )
+              )
+            order by e.occurred_at desc limit 4`,
       ),
       rows<{ provider: 'spotify' | 'apple' }>(
         this.database,
@@ -303,17 +345,20 @@ export class DemoRepository {
       PersonId,
       Person
     >;
-    const relations = Object.fromEntries(Object.keys(PEOPLE).map((id) => [id, 'none'])) as Record<
+    const peopleById = people as unknown as Record<string, Person | undefined>;
+    const relations = Object.fromEntries(peopleList.map((person) => [person.id, 'none'])) as Record<
       PersonId,
       Relation
     >;
     for (const follow of followRows) {
-      if (isSeedPersonId(follow.followee_id)) {
-        relations[follow.followee_id] = follow.status === 'accepted' ? 'friend' : 'requested';
+      const followeeId = follow.followee_id as PersonId;
+      if (relations[followeeId]) {
+        relations[followeeId] = follow.status === 'accepted' ? 'friend' : 'requested';
       }
     }
     for (const block of blockRows) {
-      if (isSeedPersonId(block.blocked_id)) relations[block.blocked_id] = 'blocked';
+      const blockedId = block.blocked_id as PersonId;
+      if (relations[blockedId]) relations[blockedId] = 'blocked';
     }
 
     const defaultModules = [
@@ -362,11 +407,11 @@ export class DemoRepository {
     const topAlbums: Track[] = albumRows.length ? albumRows : TOP_ALBUMS;
     const monthlyTracks: MonthlyTrack[] = monthlyRows;
     const recs: Rec[] = recommendationRows.flatMap((row) =>
-      isSeedPersonId(row.sender_id)
+      peopleById[row.sender_id]
         ? [
             {
               id: row.id,
-              personId: row.sender_id,
+              personId: row.sender_id as PersonId,
               text: row.text,
               track: row.title,
               artist: row.artist,
@@ -384,11 +429,11 @@ export class DemoRepository {
     }));
     const theoWall: WallPost[] = wallRows.flatMap((row) => {
       const personId = row.author_id === viewerId ? 'me' : row.author_id;
-      if (personId !== 'me' && !isSeedPersonId(personId)) return [];
+      if (personId !== 'me' && !peopleById[personId]) return [];
       return [
         {
           id: row.id,
-          personId,
+          personId: personId as 'me' | PersonId,
           text: row.text,
           track: row.title,
           artist: row.artist,
@@ -434,7 +479,7 @@ export class DemoRepository {
       })),
       feedItems: feedItems.length ? feedItems : FEED_ITEMS,
       playlistName: playlistRows[0]?.name ?? PLAYLIST_NAME,
-      ob: { name: profile.display_name, handle: `${profile.handle}2`, bio: '' },
+      ob: { name: profile.display_name, handle: profile.handle, bio: profile.bio },
       modules,
       chartTab: 'songs',
       order: order.length ? order : defaultModules,

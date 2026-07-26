@@ -5,3 +5,29 @@ import { vi } from 'vitest';
 // in-memory stand-in from tests/mocks instead. See tests/mocks/next-navigation.
 vi.mock('next/navigation', () => import('./mocks/next-navigation'));
 vi.mock('next/link', () => import('./mocks/next-link'));
+vi.mock('server-only', () => ({}));
+vi.mock('@/core/auth/actions', () => ({
+  logout: vi.fn(),
+  requestMagicLink: vi.fn(),
+  signInWithSpotify: vi.fn(),
+}));
+vi.mock('@/core/account/actions', () => ({ deleteMyAccount: vi.fn() }));
+vi.mock('@/core/auth/onboarding-actions', () => ({
+  completeOnboarding: vi.fn(),
+  saveOnboardingModules: vi.fn(),
+  saveOnboardingProfile: vi.fn(),
+}));
+vi.mock('@/core/auth/session', () => ({
+  authenticatedDestination: vi.fn().mockResolvedValue(null),
+  currentUser: vi.fn().mockResolvedValue(null),
+  requireOnboardedUser: vi.fn(),
+  requireOnboardingUser: vi.fn(),
+  requireUser: vi.fn(),
+}));
+vi.stubGlobal(
+  'fetch',
+  vi.fn().mockResolvedValue({
+    ok: true,
+    json: async () => ({ available: true }),
+  }),
+);

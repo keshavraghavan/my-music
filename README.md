@@ -9,13 +9,14 @@ after transit-system print ephemera: cream paper, rule lines, and a monthly
 
 Implemented from the `Retro Music Social` design as a standalone Next.js app.
 
-> **Status: demo becoming an app.** The read model is now persisted in
-> Postgres; Phase 3 deliberately leaves mutations simulated until the social
-> workflows land in Phase 5.
+> **Status: authenticated app, social mutations still in progress.** Accounts,
+> sessions, onboarding, privacy enforcement, account export, and deletion are
+> real; Phase 5 replaces the remaining simulated social mutations.
 > [`docs/ROADMAP.md`](docs/ROADMAP.md) inventories every workflow and sequences
 > the work to make it real. Phase 1 (TypeScript, tests, CI) and Phase 2 (real
-> routes, accessible components, responsive layout) and Phase 3 (Postgres,
-> Drizzle, repositories, server reads) are done.
+> routes, accessible components, responsive layout), Phase 3 (Postgres,
+> Drizzle, repositories, server reads), and Phase 4 (Auth.js and authorization)
+> are done.
 
 ## Running it
 
@@ -26,9 +27,8 @@ npm run build    # production build
 npm run preview  # run the production server
 ```
 
-No configuration is required to see the app: without `DATABASE_URL`, server
-components use the bundled fixture snapshot. To develop against persistent
-Postgres:
+No configuration is required to boot the public landing page. Signing in and
+accessing private app routes requires Postgres:
 
 ```bash
 docker compose up -d
@@ -37,6 +37,10 @@ npm run db:migrate
 npm run db:seed
 npm run dev
 ```
+
+Magic links are printed to the development console when `RESEND_API_KEY` is
+unset. Set Spotify credentials plus `TOKEN_ENCRYPTION_KEY` to enable Spotify
+sign-in; OAuth tokens are encrypted at rest.
 
 ## Developing
 
@@ -47,21 +51,22 @@ npm run test:e2e   # Playwright, against the built output
 ```
 
 TypeScript runs strict. Unit tests use Vitest with Testing Library; end-to-end
-tests use Playwright against the static export, with no secrets, so CI passes
-on a fork. See [`CONTRIBUTING.md`](CONTRIBUTING.md).
+tests use Playwright against the production server. See
+[`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## Screens
 
-| Screen            | URL               | What it does                                                                                                                                    |
-| ----------------- | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Landing**       | `/`               | Entry point into the five-step setup.                                                                                                           |
-| **Onboarding**    | `/onboarding/1…5` | Welcome → connect a service → name/handle/bio → pick modules → done. Handles are checked against the directory; a taken handle blocks the step. |
-| **Home**          | `/home`           | Your page. Toggle modules on/off, reorder cards by drag or arrow keys, expand a card to full width, and switch grid density.                    |
-| **Friends**       | `/friends`        | Search the directory, add friends, request to follow private accounts, remove or block from the row menu.                                       |
-| **Profile**       | `/[handle]`       | Somebody's public wall — or the same URL locked behind a follow request if they're private.                                                     |
-| **Notifications** | `/notifications`  | Unread badge in the nav; rows deep-link to the relevant screen.                                                                                 |
-| **Settings**      | `/settings/[tab]` | Account (with a delete-account danger zone), service connections, privacy, and notification preferences — one tab per URL.                      |
-| **Playlist**      | `/playlist`       | The shared _Rooftop Party 2026_ playlist, including duplicate-add conflicts.                                                                    |
+| Screen            | URL               | What it does                                                                                                                 |
+| ----------------- | ----------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| **Landing**       | `/`               | Public entry point; signed-in users resume onboarding or go to their page.                                                   |
+| **Sign in**       | `/login`          | Email magic-link login, plus Spotify OAuth when configured.                                                                  |
+| **Onboarding**    | `/onboarding/1…5` | Resumable, server-backed setup. Handle availability is checked against Postgres and protected by a unique constraint.        |
+| **Home**          | `/home`           | Your page. Toggle modules on/off, reorder cards by drag or arrow keys, expand a card to full width, and switch grid density. |
+| **Friends**       | `/friends`        | Search the directory, add friends, request to follow private accounts, remove or block from the row menu.                    |
+| **Profile**       | `/[handle]`       | Somebody's public wall — or the same URL locked behind a follow request if they're private.                                  |
+| **Notifications** | `/notifications`  | Unread badge in the nav; rows deep-link to the relevant screen.                                                              |
+| **Settings**      | `/settings/[tab]` | Account (with a delete-account danger zone), service connections, privacy, and notification preferences — one tab per URL.   |
+| **Playlist**      | `/playlist`       | The shared _Rooftop Party 2026_ playlist, including duplicate-add conflicts.                                                 |
 
 ## Home modules
 
@@ -93,7 +98,13 @@ The app models the states a real integration hits, not just the happy path:
 
 - **Postgres + Drizzle.** Server Components hydrate the UI from repository
   queries. `src/state/client-store.tsx` holds only transient UI state and
-  Phase 3's intentionally stubbed mutations.
+  the social mutations scheduled for Phase 5.
+- **Auth.js.** Database sessions guard app routes; email magic links work
+  without an email vendor in development, Spotify is optional, and OAuth
+  credentials are AES-256-GCM encrypted at rest.
+- **One authorization policy.** Profile and content reads use the same
+  private-profile/follow/block decision, with table-driven tests for the full
+  policy matrix.
 - **Next.js App Router** with the full server runtime. Profile handles resolve
   dynamically from the database rather than a static path list.
 - **Routes are the state.** Which screen you are on, which onboarding step,

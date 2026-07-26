@@ -1,6 +1,12 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import {
+  completeOnboarding,
+  saveOnboardingModules,
+  saveOnboardingProfile,
+} from '@/core/auth/onboarding-actions';
 import { ONBOARDING_STEPS, routes } from '@/core/routes';
 import { Avatar, Button, CenteredPage, Field, Toggle } from '@/core/ui';
 import { musicModules } from '@/domains/music/modules';
@@ -43,19 +49,63 @@ export function OnboardingScreen({ step }: { step: number }) {
   const router = useRouter();
   const { ob, connected, modules, people } = useAppState();
   const actions = useAppActions();
+  const [handleAvailable, setHandleAvailable] = useState<boolean | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
-  const handleTaken = isHandleTaken(
+  useEffect(() => {
+    if (step !== 3 || ob.handle.length < 3) {
+      return;
+    }
+    const controller = new AbortController();
+    const timeout = window.setTimeout(async () => {
+      const response = await fetch(`/api/handles/${encodeURIComponent(ob.handle)}`, {
+        signal: controller.signal,
+      });
+      if (response.ok) {
+        const result = (await response.json()) as { available: boolean };
+        setHandleAvailable(result.available);
+      }
+    }, 300);
+    return () => {
+      window.clearTimeout(timeout);
+      controller.abort();
+    };
+  }, [ob.handle, step]);
+
+  const locallyTaken = isHandleTaken(
     ob.handle,
     undefined,
     Object.values(people).map((person) => person.handle),
   );
+  const handleTaken = locallyTaken || (ob.handle.length >= 3 && handleAvailable === false);
   const blocked = step === 3 && handleTaken;
   const noServiceConnected = !connected.spotify && !connected.apple;
 
-  function goNext() {
+  async function goNext() {
     if (blocked) return;
-    if (step === ONBOARDING_STEPS) router.push(routes.home);
-    else router.push(routes.onboarding(step + 1));
+    setSaveError(null);
+    setSaving(true);
+    try {
+      if (step === 3) await saveOnboardingProfile(ob);
+      if (step === 4) {
+        const enabled = musicModules.all
+          .filter((module) => modules[module.key])
+          .map((module) => module.key);
+        await saveOnboardingModules(enabled);
+      }
+      if (step === ONBOARDING_STEPS) {
+        await completeOnboarding();
+        router.push(routes.home);
+        router.refresh();
+      } else {
+        router.push(routes.onboarding(step + 1));
+      }
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : 'Could not save your progress');
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -142,7 +192,10 @@ export function OnboardingScreen({ step }: { step: number }) {
               <Field
                 label="HANDLE"
                 value={ob.handle}
-                onChange={(value) => actions.setObField('handle', value)}
+                onChange={(value) => {
+                  setHandleAvailable(null);
+                  actions.setObField('handle', value);
+                }}
                 inputCss="font:500 13px 'JetBrains Mono'"
                 error={handleTaken ? `@${ob.handle} is already taken — try another.` : undefined}
                 reserveErrorSpace
@@ -212,6 +265,11 @@ export function OnboardingScreen({ step }: { step: number }) {
         </div>
 
         <div className={styles.footer}>
+          {saveError && (
+            <p role="alert" style={sx("margin:0;color:#B7472A;font:600 11px 'Arimo'")}>
+              {saveError}
+            </p>
+          )}
           {step > 1 ? (
             <Button
               css="font:700 11px 'JetBrains Mono';color:#6b6156;letter-spacing:0.05em"
@@ -228,10 +286,10 @@ export function OnboardingScreen({ step }: { step: number }) {
               padding: 11px 22px;
               opacity: ${blocked ? 0.4 : 1};
             `}
-            disabled={blocked}
+            disabled={blocked || saving}
             onClick={goNext}
           >
-            {NEXT_LABELS[step]}
+            {saving ? 'SAVING…' : NEXT_LABELS[step]}
           </Button>
         </div>
       </div>

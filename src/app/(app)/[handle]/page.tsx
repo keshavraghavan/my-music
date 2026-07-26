@@ -1,5 +1,7 @@
 import { notFound } from 'next/navigation';
+import { requireOnboardedUser } from '@/core/auth/session';
 import { loadPersonByHandle } from '@/core/db/read-model';
+import { canUserViewProfile } from '@/core/graph/authorization';
 import { ProfileScreen } from './ProfileScreen';
 
 /**
@@ -11,7 +13,8 @@ import { ProfileScreen } from './ProfileScreen';
  */
 export default async function ProfilePage({ params }: { params: Promise<{ handle: string }> }) {
   const { handle } = await params;
+  const viewer = await requireOnboardedUser();
   const person = await loadPersonByHandle(handle);
-  if (!person) notFound();
+  if (!person || !(await canUserViewProfile(viewer.id, person.id))) notFound();
   return <ProfileScreen person={person} />;
 }

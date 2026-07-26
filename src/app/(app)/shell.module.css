@@ -78,3 +78,18 @@
     font-size: 10px;
   }
 }
+.signOut {
+  border: 0;
+  padding: 5px;
+  background: transparent;
+  color: inherit;
+  font:
+    700 9px 'JetBrains Mono',
+    monospace;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+}
+
+.signOut:hover {
+  text-decoration: underline;
+}

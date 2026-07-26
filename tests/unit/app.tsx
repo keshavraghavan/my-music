@@ -1,6 +1,6 @@
 import { render } from '@testing-library/react';
 import { usePathname } from 'next/navigation';
-import AppLayout from '@/app/(app)/layout';
+import { AppShell } from '@/app/(app)/AppShell';
 import FriendsPage from '@/app/(app)/friends/page';
 import HomePage from '@/app/(app)/home/page';
 import NotificationsPage from '@/app/(app)/notifications/page';
@@ -8,7 +8,7 @@ import PlaylistPage from '@/app/(app)/playlist/page';
 import { ProfileScreen } from '@/app/(app)/[handle]/ProfileScreen';
 import { SettingsScreen } from '@/app/(app)/settings/SettingsScreen';
 import { OnboardingScreen } from '@/app/onboarding/[step]/OnboardingScreen';
-import LandingPage from '@/app/page';
+import { LandingScreen } from '@/app/page';
 import { personByHandle } from '@/domains/music/data/people';
 import { AppStateProvider } from '@/state/client-store';
 import type { SettingsTab } from '@/types';
@@ -39,12 +39,13 @@ function screenFor(path: string) {
 
 function TestApp() {
   const path = usePathname();
-  if (path === '/') return <LandingPage />;
+  if (path === '/') return <LandingScreen />;
+  if (path === '/login') return <main>Sign in to MyMusic.</main>;
 
   const onboarding = /^\/onboarding\/(\d)$/.exec(path);
   if (onboarding) return <OnboardingScreen step={Number(onboarding[1])} />;
 
-  return <AppLayout>{screenFor(path)}</AppLayout>;
+  return <AppShell>{screenFor(path)}</AppShell>;
 }
 
 /** Renders the app at `path`, with the store fresh. */

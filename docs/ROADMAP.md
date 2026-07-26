@@ -364,13 +364,17 @@ is byte-comparable. Repository functions with unit tests. Screens read from the
 DB through server components; mutations still stubbed.
 **Ships:** data survives a refresh.
 
-### Phase 4 — Auth & authorization
+### Phase 4 — Auth & authorization ✅ _done — privacy enforced server-side_
 
-Auth.js: email magic-link + Spotify OAuth. Real signup/login/logout, resumable
-server-backed onboarding, `requireUser()` guards, CSRF, rate limiting.
-Implement `core/graph` **authorization** — the single function every read path
-calls to answer "can A see B's content?", enforcing private profiles and
-blocks. Account deletion and data export.
+Auth.js database sessions with email magic-link (console delivery in
+development, Resend in production) and optional Spotify OAuth; OAuth tokens
+are AES-256-GCM encrypted at rest. Real signup/login/logout, resumable
+server-backed onboarding, debounced/race-safe handle checks, `requireUser()`
+and onboarding guards, Auth.js CSRF protection, and rate limits on sensitive
+endpoints. `core/graph/authorization` is the single private-profile/follow/block
+policy used by profile and content reads, with a table-driven policy matrix.
+Account deletion cascades from the user row, and the token-safe JSON export
+covers core and music-domain data.
 **Ships:** multiple real users; privacy is real, not cosmetic.
 
 ### Phase 5 — Core social workflows

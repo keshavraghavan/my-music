@@ -78,6 +78,11 @@ export function SettingsScreen({ tab }: { tab: SettingsTab }) {
           >
             SAVE CHANGES
           </Button>
+          <p className={styles.dangerCopy}>
+            <a href="/api/account/export" download>
+              DOWNLOAD MY DATA →
+            </a>
+          </p>
 
           <section className={styles.danger} aria-labelledby="danger-zone">
             <h2 id="danger-zone" className={styles.dangerHeading}>
