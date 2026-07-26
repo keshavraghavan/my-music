@@ -30,6 +30,10 @@ keys) plus a real Spotify adapter and a stubbed Apple Music one; single app with
 strong internal seams, no monorepo; phased delivery where the app runs after
 every phase.
 
+**Product decisions** — the social model, playlist collaboration, and moderation
+— are settled in [Part 7](#part-7--resolved-product-decisions); Parts 1, 3 and 4
+already reflect them.
+
 ---
 
 ## Part 1 — Workflow inventory
@@ -80,9 +84,11 @@ scope of "fully functional."
 | Workflow | Today | Needed |
 | --- | --- | --- |
 | Directory search | Filters 8 hardcoded `PEOPLE` (`App.jsx:359`) | Indexed search over real users, paginated, block-aware |
-| Add friend | Sets `relations[id] = 'friend'` instantly (`App.jsx:148`) | Follow (asymmetric) or friend request (symmetric) — **see open question** |
-| Request to follow (private) | Sets `'requested'` | Real request record |
-| **Accept / decline a request** | **Missing entirely** — requests can be sent, never received or accepted | Incoming-request inbox, accept/decline, notification |
+| Follow a **public** profile | Sets `relations[id] = 'friend'` instantly (`App.jsx:148`) | Takes effect immediately — `follows` row created `accepted`, no approval |
+| Request to follow a **private** profile | Sets `'requested'` | `follows` row created `pending`; content stays gated until approved |
+| **Accept / decline a request** | **Missing entirely** — requests can be sent, never received or accepted | Incoming-request inbox, accept/decline, notification to the requester |
+| Cancel a sent request | Missing | Requester withdraws a `pending` row |
+| Unfollow | Conflated with "remove friend" | Delete own edge only; the reverse edge is untouched |
 | Remove friend | Confirm → `'none'` | Delete edge both directions; revoke content access |
 | Block | Confirm → `'blocked'` | **Enforced**: hide profile, strip from feeds/search, block DMs/recs both ways |
 | Unblock / blocked list | Missing | Settings screen listing blocks |
@@ -95,13 +101,18 @@ scope of "fully functional."
 | Recommend a track to a friend | `postRecommendation()` prepends to `theoWall` — and **only ever Theo's wall** (`App.jsx:219`, `379`) | Real post to any user's wall, authorized by relationship |
 | Friend wall | Only `theok` has one; every other friend renders empty | Per-user wall, paginated |
 | Receive recommendations | Three seeded `recs` | Real inbox, ordered, paginated |
-| Hide / report a rec | `status: 'hidden'` / `'reported'` in memory (`App.jsx:162`) | Persist; reports enter a moderation queue |
-| **Moderation queue** | **Missing** — "We'll take a look" is a lie today | Admin review surface, or at minimum a persisted report record with status |
+| Hide / report a rec | `status: 'hidden'` / `'reported'` in memory (`App.jsx:162`) | Persist; report row + email alert to the operator |
+| Moderation follow-up | **Missing** — "We'll take a look" is a lie today | v1: persisted `reports` row with status + email alert. Admin queue ships later |
 | Feed ("Line Updates") | Four hardcoded strings (`App.jsx:438`) | Real activity feed: fan-out-on-read from followees' events, paginated, block-filtered |
 | Monthly Top 10 | Add/remove in memory, cap of 10 | Persist; enforce cap and dedupe server-side |
-| Shared playlist | One hardcoded playlist, three tracks | Playlist CRUD, membership/permissions, multiple playlists |
+| Create a playlist | Missing — one playlist is hardcoded | Name, description, visibility; creator becomes owner |
+| **Invite friends at creation** | **Missing** | Creation flow offers "add friends"; selected friends get an `INVITE` |
+| **Accept / decline an invite** | **Missing** | Invitee confirms before joining; only then may they add tracks |
+| Invite after creation / revoke | Missing | Owner invites or removes collaborators from playlist settings |
+| Add a track | `postRecommendation()` playlist branch (`App.jsx:211`) | Authorized: owner or **accepted** collaborator only |
 | Duplicate-add conflict | Nice UX; appends `'Juno Reyes'` string to `addedBy` (`App.jsx:213`) | Contributor rows keyed by user id, not display name |
 | Playlist reorder / remove track | Missing | Needed for a real playlist |
+| Leave a playlist | Missing | Collaborator exits; their contributions stay attributed |
 | Delete / edit own post | Missing | Table stakes |
 
 ### F. Notifications
@@ -111,9 +122,10 @@ scope of "fully functional."
 | List + unread badge | Four seeded rows | Real per-user notification table, paginated |
 | Mark read / mark all read | In-memory map (`App.jsx:168`) | Persisted read state |
 | Deep link from row | `clickNotification()` routes by `type` (`App.jsx:169`) | Route to the specific entity, not just the screen |
-| Generation | None — notifications never get created | Emitted by domain events (rec posted, request accepted, chart updated) |
+| Generation | None — notifications never get created | Emitted by domain events: rec posted, **follow request received**, **request accepted**, **playlist invite received**, **invite accepted**, track added, chart updated |
+| Actionable rows | None — rows only navigate | Follow requests and playlist invites carry accept/decline inline |
 | Preferences | `notifPrefs` booleans, unused | Respected at emit time |
-| Email / push delivery | Missing | Email digest via Resend; web push optional |
+| Email / push delivery | Missing | Email digest via Resend; **operator alert on new report**; web push optional |
 | Realtime arrival | Missing | SSE channel per user |
 
 ### G. Cross-cutting gaps
@@ -208,16 +220,34 @@ Drizzle schema, split core vs. domain:
 `verification_tokens` (Auth.js), `profiles` (handle unique, display_name, bio,
 avatar_url, is_private, timezone), `follows` (follower/followee, status:
 `pending|accepted`), `blocks`, `activity_events` (actor, verb, object_type,
-object_id — polymorphic), `notifications`, `notification_prefs`, `reports`,
+object_id — polymorphic), `notifications`, `notification_prefs`, `reports`
+(reporter, subject_type, subject_id, reason, status: `open|reviewed|actioned`),
 `page_modules` (user_id, module_key, enabled, position, span), `user_prefs`.
+
+**`follows` is the whole social graph.** One table serves both directions of
+the decision above: following a public profile inserts `accepted` directly,
+following a private one inserts `pending`. "Friends" in the UI is a derived
+concept — a mutual pair of `accepted` rows — not a stored entity, so there is
+no second system to keep consistent. A partial index on
+`(followee_id) WHERE status = 'pending'` backs the request inbox.
 
 **`domains/music/db/schema/`** — `service_connections` (provider,
 **encrypted** access/refresh tokens, expiry, scopes), `artists`, `tracks`,
 `albums` (provider-agnostic ids + provider id map), `plays` (user, track,
 played_at, ms_played, source), `chart_snapshots` (user, period, rank, track,
-prev_rank), `monthly_picks`, `playlists`, `playlist_tracks`,
-`playlist_contributors` (user_id — replaces today's `addedBy: string[]`),
+prev_rank), `monthly_picks`, `playlists` (owner_id, name, visibility),
+`playlist_members` (playlist_id, user_id, role: `owner|collaborator`, status:
+`invited|accepted|declined`, invited_by, responded_at), `playlist_tracks`,
+`playlist_track_contributors` (user_id — replaces today's `addedBy: string[]`),
 `wall_posts`, `recommendations`.
+
+**Playlist collaboration is invite-only.** `playlist_members` carries both
+membership and the invitation lifecycle in one table, so "invited but hasn't
+answered" is a first-class state rather than an absence. Write authorization is
+a single predicate — `role = 'owner' OR status = 'accepted'` — checked server
+side on every track mutation, which means a stale invite link cannot be used to
+write. `playlist_track_contributors` stays keyed by `user_id` so the
+duplicate-add credit survives a display-name change.
 
 **Non-negotiable:** access and refresh tokens are encrypted at rest
 (AES-256-GCM via a `TOKEN_ENCRYPTION_KEY` env var), never logged, and never
@@ -266,12 +296,17 @@ blocks. Account deletion and data export.
 **Ships:** multiple real users; privacy is real, not cosmetic.
 
 ### Phase 5 — Core social workflows
-Follow/request/**accept**/decline (closing the missing-acceptance gap), block
-enforcement end-to-end, walls and recommendations against any user, feed
-generation from `activity_events`, notifications emitted by domain events and
-respecting prefs, reports persisted to a moderation queue, playlist CRUD +
-contributors + reorder, page-layout persistence. Optimistic UI with rollback;
-loading/error/empty states everywhere.
+**Follow graph:** immediate follow for public profiles, request → accept/decline
+for private ones (closing the missing-acceptance gap), cancel, unfollow, plus
+the request inbox. Block enforcement end-to-end.
+**Playlists:** create with an invite-friends step, invite/accept/decline/revoke,
+leave, track add/reorder/remove gated on accepted membership, duplicate-add
+conflict keyed by user id.
+**Everything else:** walls and recommendations against any user, feed generation
+from `activity_events`, notifications emitted by domain events and respecting
+prefs — with accept/decline actionable inline on requests and invites — reports
+persisted with an operator email alert, page-layout persistence. Optimistic UI
+with rollback; loading/error/empty states everywhere.
 **Ships:** every button does what it claims.
 
 ### Phase 6 — Music integrations
@@ -315,11 +350,14 @@ button.
   authorization function (the highest-risk code in the app: table-driven tests
   for every viewer × privacy × block × relationship combination), provider
   adapters against recorded fixtures.
-- **E2E (Playwright, mock provider, no secrets)** — the full journey: sign up →
-  onboard → connect mock service → build page → search a user → send a follow
-  request → **accept it as the second user** → post a recommendation → see it
-  on the wall → receive the notification → add a duplicate playlist track and
-  resolve the conflict → block → confirm content disappears → delete account.
+- **E2E (Playwright, mock provider, no secrets)** — the full journey across two
+  users: sign up → onboard → connect mock service → build page → search a user →
+  **follow a public profile and land immediately** → **request a private one and
+  accept it as the second user** → post a recommendation → see it on the wall →
+  receive the notification → **create a playlist, invite the second user, accept
+  as them, add a track** → confirm a non-member is refused the same write → add
+  a duplicate track and resolve the conflict → report a rec and assert the row
+  persists → block → confirm content disappears → delete account.
 - **Manual** — `docker compose up && npm run dev`, walk each screen at 375px
   and 1440px, navigate the entire app with only the keyboard, and hard-refresh
   on every screen to confirm state persists and deep links resolve.
@@ -328,16 +366,55 @@ button.
 
 ---
 
-## Open questions (answerable during Phase 4, not blocking)
+## Part 7 — Resolved product decisions
 
-1. **Follow or friendship?** The current model is contradictory: `addFriend()`
-   makes a symmetric friendship instantly, `requestFollow()` implies asymmetric
-   following, and copy uses "friends" throughout. **Recommendation:**
-   asymmetric follow with an approval gate for private accounts (Instagram
-   model), and surface "friends" in the UI as mutual follows. This is one
-   `follows` table instead of two systems, and it's the primitive most other
-   social sites want from the template.
-2. **Playlist permissions** — open to all followers, or invite-only?
-   Recommendation: per-playlist `visibility` + `contributor_policy`.
-3. **Moderation** — full admin queue, or persisted reports with an email alert
-   in v1? Recommendation: the latter; ship the admin surface later.
+These were open when the roadmap was drafted; they are settled and the schema
+and phases above reflect them.
+
+### 1. Asymmetric follow, gated by profile privacy
+
+Today's model contradicts itself — `addFriend()` creates instant symmetric
+friendship while `requestFollow()` implies following, and the copy says
+"friends" everywhere.
+
+**Decided:** one asymmetric follow relationship, where the target profile's
+privacy decides whether approval is needed.
+
+| Target profile | Result |
+| --- | --- |
+| Public | Follow takes effect immediately; content visible at once |
+| Private | Request created `pending`; content stays gated until accepted |
+
+The requester can cancel a pending request; the recipient can accept or decline
+from the notification row or a request inbox. Unfollowing removes only the
+follower's own edge. "Friends" survives as UI vocabulary for a mutual pair, not
+as a stored entity.
+
+*Why it matters for the template:* one `follows` table covers public-follow
+(Twitter-shaped) and private-approval (Instagram-shaped) products, so a fork
+picks its social model by toggling a profile flag rather than by writing a
+second system.
+
+### 2. Playlists are collaborative by invitation
+
+**Decided:** creating a playlist offers an optional "add friends" step. Selected
+friends receive an `INVITE` they must **accept** before joining — being invited
+is not being a member.
+
+Flow: creator picks friends at creation (or invites later from playlist
+settings) → each invitee gets a notification with inline accept/decline →
+accepting grants track-add rights. The owner can revoke an invite or remove a
+collaborator; a collaborator can leave, and their past contributions stay
+credited.
+
+Every track mutation is authorized server side against
+`role = 'owner' OR status = 'accepted'`, so an unanswered or declined invite
+grants nothing.
+
+### 3. Reports persist and alert; admin UI later
+
+**Decided:** reporting writes a `reports` row (reporter, subject, reason,
+status) and emails the operator. No admin surface in v1 — "we'll take a look"
+becomes true because a human is actually notified, which is the part that
+matters. The status column is there from day one so the admin queue is a read
+model over existing data, not a migration.
