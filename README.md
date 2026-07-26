@@ -7,15 +7,15 @@ swap recommendations with friends, and keep a shared playlist running. Styled
 after transit-system print ephemera: cream paper, rule lines, and a monthly
 "fare receipt" of what you listened to.
 
-Implemented from the `Retro Music Social` design as a standalone React app.
+Implemented from the `Retro Music Social` design as a standalone Next.js app.
 
 ## Running it
 
 ```bash
 npm install
-npm run dev      # dev server with HMR
-npm run build    # production build to dist/
-npm run preview  # serve the production build
+npm run dev      # dev server with fast refresh, on :3000
+npm run build    # static export to out/
+npm run preview  # serve the exported build
 ```
 
 ## Screens
@@ -56,6 +56,16 @@ The app models the states a real integration hits, not just the happy path:
 
 - **No backend.** All data is seeded in component state; actions mutate it in
   memory, so a refresh resets the demo.
+- **Next.js App Router**, configured for static export (`output: 'export'`), so
+  `npm run build` emits a prerendered site to `out/` that any static host can
+  serve with no Node runtime. Unlike the previous Vite `base: './'`, Next emits
+  absolute asset paths — to serve from a sub-path, set `basePath` and
+  `assetPrefix` in `next.config.mjs`.
+- **Layout.** `src/app/layout.jsx` holds the document shell, `metadata`, and the
+  font links; `src/app/page.jsx` is the single route and renders `<App />`.
+- **One client component.** `src/App.jsx` carries `'use client'` — the whole app
+  is interactive, so it hydrates as a unit. It has no browser-only APIs, so the
+  landing screen still prerenders to static HTML at build time.
 - **State** lives in a single `App` class component. `renderVals()` derives every
   display value (labels, colors, toggle positions) from state in one place,
   keeping the JSX free of branching logic.
@@ -63,6 +73,8 @@ The app models the states a real integration hits, not just the happy path:
   parses those CSS strings into React style objects and memoizes the result, so
   the styling stays byte-for-byte comparable to the source rather than being
   hand-translated.
-- **Fonts** are Tinos, JetBrains Mono, and Arimo, loaded from Google Fonts. They
-  are metric-compatible with Times New Roman, Courier, and Arial, so the layout
-  holds if the fonts fail to load.
+- **Fonts** are Tinos, JetBrains Mono, and Arimo, loaded from Google Fonts via a
+  stylesheet link rather than `next/font`: the design's inline styles name the
+  families literally, and `next/font` would rename them to generated
+  identifiers. They are metric-compatible with Times New Roman, Courier, and
+  Arial, so the layout holds if the fonts fail to load.

@@ -1,9 +1,11 @@
 node_modules
-dist
-dist-ssr
 *.local
 .DS_Store
-.vite
+
+# Next.js
+.next
+out
+next-env.d.ts
 
 # Editor
 .idea

@@ -2,19 +2,18 @@
   "name": "my-music",
   "private": true,
   "version": "0.1.0",
-  "type": "module",
   "description": "MyMusic — a retro music-social platform where you build your page, chart your listening, and swap recommendations with friends.",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
+    "dev": "next dev",
+    "build": "next build",
+    "preview": "serve out"
   },
   "dependencies": {
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "next": "^16.2.12",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
   },
   "devDependencies": {
-    "@vitejs/plugin-react": "^6.0.4",
-    "vite": "^8.1.5"
+    "serve": "^14.2.4"
   }
 }
