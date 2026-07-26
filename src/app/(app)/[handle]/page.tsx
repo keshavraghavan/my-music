@@ -1,21 +1,17 @@
 import { notFound } from 'next/navigation';
-import { PEOPLE_LIST, personByHandle } from '@/domains/music/data/people';
+import { loadPersonByHandle } from '@/core/db/read-model';
 import { ProfileScreen } from './ProfileScreen';
 
 /**
  * `/[handle]` — a shareable page per person, which is what the design's
  * `viewingFriendId` in state could never be.
  *
- * The static export builds one page per seeded handle; Phase 3 makes this a
- * lookup against the database.
+ * Phase 3 resolves this route from Postgres on the server. The no-env fallback
+ * resolves the same seeded handles so a fresh clone still works.
  */
-export function generateStaticParams() {
-  return PEOPLE_LIST.map((person) => ({ handle: person.handle }));
-}
-
 export default async function ProfilePage({ params }: { params: Promise<{ handle: string }> }) {
   const { handle } = await params;
-  const person = personByHandle(handle);
+  const person = await loadPersonByHandle(handle);
   if (!person) notFound();
   return <ProfileScreen person={person} />;
 }

@@ -49,9 +49,46 @@ export interface Person {
   private: boolean;
 }
 
+export interface ViewerProfile {
+  id: 'me';
+  userId: string;
+  name: string;
+  handle: string;
+  initials: string;
+  color: string;
+  city: string;
+  bio: string;
+}
+
 export interface Track {
   title: string;
   artist: string;
+}
+
+export interface NowPlaying {
+  track: string;
+  artist: string;
+  album: string;
+  progressPct: string;
+  updated: string;
+}
+
+export interface ReceiptMeta {
+  station: string;
+  date: string;
+  totalRideTime: string;
+  month: string;
+}
+
+export interface ReceiptLine extends Track {
+  stop: string;
+  mins: string;
+}
+
+export interface FeedItem {
+  text: string;
+  time: string;
+  color: string;
 }
 
 export interface MonthlyTrack extends Track {
@@ -123,6 +160,18 @@ export interface ConfirmState {
  * for the same reason.
  */
 export interface AppState {
+  /** Server-loaded persisted data. Client actions remain stubs until Phase 5. */
+  me: ViewerProfile;
+  people: Record<PersonId, Person>;
+  catalog: Track[];
+  topSongs: Track[];
+  topAlbums: Track[];
+  nowPlaying: NowPlaying;
+  receiptMeta: ReceiptMeta;
+  receiptLines: ReceiptLine[];
+  feedItems: FeedItem[];
+  playlistName: string;
+
   ob: ProfileForm;
   modules: Record<ModuleKey, boolean>;
   chartTab: ChartTab;

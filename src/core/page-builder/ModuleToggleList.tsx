@@ -1,7 +1,7 @@
 'use client';
 
 import { SegmentedControl, SegmentedOption, Toggle } from '@/core/ui';
-import { useAppActions, useAppState } from '@/state/store';
+import { useAppActions, useAppState } from '@/state/client-store';
 import type { Spacing } from '@/types';
 import type { ModuleRegistry } from './registry';
 import styles from './ModuleToggleList.module.css';

@@ -1,13 +1,12 @@
 'use client';
 
 import { Button, Page } from '@/core/ui';
-import { PLAYLIST_NAME } from '@/domains/music/data/listening';
-import { useAppActions, useAppState } from '@/state/store';
+import { useAppActions, useAppState } from '@/state/client-store';
 import styles from './playlist.module.css';
 
 /** The shared playlist. Collaboration becomes invite-only in Phase 5. */
 export default function PlaylistPage() {
-  const { playlistTracks } = useAppState();
+  const { playlistTracks, playlistName } = useAppState();
   const actions = useAppActions();
   const contributors = new Set(playlistTracks.flatMap((t) => t.addedBy)).size;
 
@@ -15,7 +14,7 @@ export default function PlaylistPage() {
     <Page width="reading">
       <div className={styles.head}>
         <div>
-          <h1 className={styles.title}>{PLAYLIST_NAME}</h1>
+          <h1 className={styles.title}>{playlistName}</h1>
           <p className={styles.subtitle}>SHARED PLAYLIST ｜ {contributors} CONTRIBUTORS</p>
         </div>
         <Button

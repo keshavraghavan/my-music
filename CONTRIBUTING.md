@@ -11,8 +11,14 @@ npm install
 npm run dev          # http://localhost:3000
 ```
 
-That is the whole setup. No database, no API keys, no `.env` — if you ever find
-yourself needing one to run the app, that is a bug worth reporting.
+That is enough to render the bundled fixture snapshot. For database work:
+
+```bash
+docker compose up -d
+cp .env.example .env.local
+npm run db:migrate
+npm run db:seed
+```
 
 ## Before you open a pull request
 
@@ -26,16 +32,18 @@ never add a check that depends on a credential.
 
 ### Scripts
 
-| Script              | What it does                                  |
-| ------------------- | --------------------------------------------- |
-| `npm run dev`       | Dev server with fast refresh                  |
-| `npm run build`     | Static export to `out/`                       |
-| `npm run typecheck` | `tsc --noEmit`, strict                        |
-| `npm run lint`      | ESLint                                        |
-| `npm run format`    | Prettier, writing in place                    |
-| `npm test`          | Unit tests (Vitest + Testing Library)         |
-| `npm run test:e2e`  | End-to-end tests (Playwright, against `out/`) |
-| `npm run check`     | Everything CI runs except the build and e2e   |
+| Script               | What it does                                     |
+| -------------------- | ------------------------------------------------ |
+| `npm run dev`        | Dev server with fast refresh                     |
+| `npm run build`      | Production server build                          |
+| `npm run db:migrate` | Apply committed Drizzle migrations               |
+| `npm run db:seed`    | Idempotently load the demo fixtures              |
+| `npm run typecheck`  | `tsc --noEmit`, strict                           |
+| `npm run lint`       | ESLint                                           |
+| `npm run format`     | Prettier, writing in place                       |
+| `npm test`           | Unit tests (Vitest + Testing Library)            |
+| `npm run test:e2e`   | End-to-end tests (Playwright, production server) |
+| `npm run check`      | Everything CI runs except the build and e2e      |
 
 If your environment already ships a Chromium that Playwright did not install,
 point at it rather than downloading another:
@@ -52,7 +60,9 @@ src/core/ui/        Accessible primitives — Button, Toggle, Modal, Field, …
 src/core/page-builder/  Module registry, drag/keyboard reorder, the grid.
 src/core/styles/    Design tokens. Retheming is editing tokens.css.
 src/domains/music/  Everything music-specific: data, modules, compose.
-src/state/store.tsx In-memory store. Phase 3 replaces it with the database.
+src/state/client-store.tsx Transient UI state and stubbed Phase 3 mutations.
+src/core/db/        Drizzle client, core schema, migrations, repositories.
+src/domains/music/db/ Music-domain schema.
 src/types.ts        Domain types.
 src/sx.ts           Inline-style parser. Being retired; see the roadmap.
 tests/unit/         Vitest + Testing Library.

@@ -3,14 +3,12 @@
 import type { ReactNode } from 'react';
 import { Button, Field, Modal } from '@/core/ui';
 import sx from '@/sx';
-import { useAppActions, useAppState } from '@/state/store';
-import { PLAYLIST_NAME } from '../data/listening';
-import { PEOPLE } from '../data/people';
+import { useAppActions, useAppState } from '@/state/client-store';
 import { filterTracks } from '../data/tracks';
 
 const TITLES = {
   monthlyPick: 'Add to Your Top 10',
-  addTrack: `Add Track → ${PLAYLIST_NAME}`,
+  addTrack: 'Add Track',
 } as const;
 
 const SUBMIT_LABELS = {
@@ -24,10 +22,10 @@ const SUBMIT_LABELS = {
  * playlist, or your own Top 10.
  */
 export function ComposeModal() {
-  const { compose, playlistTracks } = useAppState();
+  const { compose, playlistTracks, playlistName, people, catalog } = useAppState();
   const actions = useAppActions();
 
-  const results = filterTracks(compose.query);
+  const results = filterTracks(compose.query, catalog);
   const selected = compose.selectedIdx == null ? null : results[compose.selectedIdx];
   const duplicate = selected
     ? playlistTracks.find((t) => t.title.toLowerCase() === selected.title.toLowerCase())
@@ -35,9 +33,13 @@ export function ComposeModal() {
   const showDuplicateWarning = compose.target === 'playlist' && !!duplicate;
   const duplicateCredit = duplicate ? duplicate.addedBy[duplicate.addedBy.length - 1] : '';
 
-  const recipient = compose.targetFriendId ? PEOPLE[compose.targetFriendId] : PEOPLE.theok;
+  const recipient = compose.targetFriendId ? people[compose.targetFriendId] : people.theok;
   const title =
-    compose.mode === 'recommend' ? `New Recommendation → ${recipient.name}` : TITLES[compose.mode];
+    compose.mode === 'recommend'
+      ? `New Recommendation → ${recipient.name}`
+      : compose.mode === 'addTrack'
+        ? `Add Track → ${playlistName}`
+        : TITLES[compose.mode];
 
   return (
     <Modal title={title} onClose={actions.closeCompose} size="lg" withHeader>
@@ -131,7 +133,7 @@ export function ComposeModal() {
                   checked={compose.target === 'playlist'}
                   onSelect={() => actions.setComposeTarget('playlist')}
                 >
-                  {PLAYLIST_NAME}{' '}
+                  {playlistName}{' '}
                   <span style={sx('color:#6b6156;font-weight:400')}>｜ shared playlist</span>
                 </TargetOption>
               </div>

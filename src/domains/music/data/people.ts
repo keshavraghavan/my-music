@@ -44,8 +44,12 @@ export function isPersonId(id: string): id is PersonId {
  * True when the handle already belongs to someone. `ownHandle` is exempt, so
  * saving your profile without changing your handle is not a clash.
  */
-export function isHandleTaken(handle: string, ownHandle?: string): boolean {
-  return DIRECTORY_HANDLES.includes(handle) && handle !== ownHandle;
+export function isHandleTaken(
+  handle: string,
+  ownHandle?: string,
+  handles: readonly string[] = DIRECTORY_HANDLES,
+): boolean {
+  return handles.includes(handle) && handle !== ownHandle;
 }
 
 /** Resolves the `/[handle]` route segment to a person, or undefined. */

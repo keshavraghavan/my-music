@@ -3,8 +3,7 @@
 import { ModuleCard } from '@/core/page-builder';
 import { Button, EmptyState } from '@/core/ui';
 import sx from '@/sx';
-import { useAppActions, useAppState } from '@/state/store';
-import { RECEIPT_META } from '../data/listening';
+import { useAppActions, useAppState } from '@/state/client-store';
 import styles from './modules.module.css';
 
 const CARD_CSS = 'border:1px solid rgba(30,27,24,0.3)';
@@ -12,7 +11,7 @@ const EXPAND_CSS = 'top:47px;right:14px';
 const HANDLE_CSS = 'color:rgba(242,236,223,0.4);z-index:1';
 
 export function MonthlyModule() {
-  const { monthlyTracks, editMode } = useAppState();
+  const { monthlyTracks, editMode, receiptMeta } = useAppState();
   const actions = useAppActions();
   const isFull = monthlyTracks.length >= 10;
 
@@ -33,7 +32,7 @@ export function MonthlyModule() {
           MY TOP 10 — HAND-PICKED
         </h2>
         <span style={sx("font:400 10.5px 'JetBrains Mono';color:rgba(242,236,223,0.55)")}>
-          {RECEIPT_META.month}
+          {receiptMeta.month}
         </span>
       </div>
       <div style={sx("padding:8px 100px 0 20px;font:400 11px/1.5 'Arimo';color:#6b6156")}>

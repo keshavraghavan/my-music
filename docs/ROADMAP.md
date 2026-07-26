@@ -187,7 +187,7 @@ src/
     styles/                   # ✅ design tokens (CSS custom properties)
     routes.ts                 # ✅ every URL in the app, named once
 
-  state/store.tsx             # ✅ interim in-memory store; Phase 3 retires it
+  state/client-store.tsx      # ✅ transient UI + stub mutations; reads come from DB
 
   domains/music/              # ← swap this folder to build a different site
     providers/                # MusicProvider interface
@@ -356,7 +356,7 @@ Notes carried forward:
 
 **Shipped:** same features, real URLs, keyboard-navigable, works on a phone.
 
-### Phase 3 — Data layer
+### Phase 3 — Data layer ✅ _done — persisted server reads_
 
 Postgres + Drizzle, schema and migrations, `docker-compose.yml` for local dev.
 Seed script that reproduces today's `PEOPLE`/`TRACK_POOL` fixtures so the demo

@@ -36,10 +36,10 @@ export default defineConfig({
     },
   ],
 
-  // The app is a static export, so e2e runs against the real production build
-  // rather than the dev server.
+  // E2E runs against the real production server. With no DATABASE_URL it uses
+  // the bundled seed snapshot, just like a fresh clone.
   webServer: {
-    command: `npx serve out -l ${PORT} --no-clipboard`,
+    command: `npm run preview -- -p ${PORT}`,
     url: `http://127.0.0.1:${PORT}`,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,

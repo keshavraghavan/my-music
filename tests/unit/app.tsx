@@ -10,7 +10,7 @@ import { SettingsScreen } from '@/app/(app)/settings/SettingsScreen';
 import { OnboardingScreen } from '@/app/onboarding/[step]/OnboardingScreen';
 import LandingPage from '@/app/page';
 import { personByHandle } from '@/domains/music/data/people';
-import { AppStateProvider } from '@/state/store';
+import { AppStateProvider } from '@/state/client-store';
 import type { SettingsTab } from '@/types';
 import { testRouter } from '../mocks/next-navigation';
 

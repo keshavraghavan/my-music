@@ -1,4 +1,4 @@
-import type { Track } from '@/types';
+import type { FeedItem, ReceiptLine, Track } from '@/types';
 
 /*
  * Seeded listening data: the chart, the receipt, Now Playing and the feed.
@@ -27,12 +27,6 @@ export const TOP_ALBUMS: Track[] = [
   { title: 'Honeycomb EP', artist: 'Peach Radio' },
 ];
 
-export interface ReceiptLine extends Track {
-  /** The stop number down the left of the receipt: 01, 02, … */
-  stop: string;
-  mins: string;
-}
-
 /** This month's fare receipt: the top five, with time ridden on each. */
 export function monthlyReceipt(): ReceiptLine[] {
   return TOP_SONGS.slice(0, 5).map((t, i) => ({
@@ -56,12 +50,6 @@ export const RECEIPT_META = {
   totalRideTime: '47H 12M',
   month: 'JULY 2026',
 } as const;
-
-export interface FeedItem {
-  text: string;
-  time: string;
-  color: string;
-}
 
 // prettier-ignore
 export const FEED_ITEMS: FeedItem[] = [

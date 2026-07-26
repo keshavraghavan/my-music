@@ -1,6 +1,6 @@
 'use client';
 
-import { useAppState } from '@/state/store';
+import { useAppState } from '@/state/client-store';
 import type { ModuleRegistry } from './registry';
 import styles from './ModuleGrid.module.css';
 
