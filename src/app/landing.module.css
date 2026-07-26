@@ -1,0 +1,69 @@
+.screen {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding: 24px 16px;
+  box-sizing: border-box;
+  background: repeating-linear-gradient(
+    135deg,
+    var(--accent-red) 0 3px,
+    var(--paper) 3px 3px,
+    var(--paper) 3px 60px,
+    var(--accent-green) 60px 63px,
+    var(--paper) 63px 120px
+  );
+}
+
+.card {
+  background: var(--paper);
+  padding: 44px 60px;
+  border: 1px solid var(--rule);
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.wordmark {
+  font: 700 60px/1 var(--font-display);
+  text-align: center;
+  margin: 0;
+}
+
+.tagline {
+  font: 400 13px var(--font-body);
+  color: var(--muted);
+  text-align: center;
+  margin-top: 12px;
+  letter-spacing: 0.04em;
+}
+
+.cta {
+  display: block;
+  margin-top: 22px;
+  background: var(--ink);
+  color: var(--ink-inverse);
+  font: 700 12px var(--font-mono);
+  text-align: center;
+  padding: 14px;
+  letter-spacing: 0.08em;
+}
+
+.cta:hover {
+  color: var(--ink-inverse);
+}
+
+@media (max-width: 480px) {
+  .card {
+    padding: 32px 24px;
+  }
+
+  .wordmark {
+    font-size: 44px;
+  }
+
+  .tagline {
+    font-size: 11px;
+  }
+}

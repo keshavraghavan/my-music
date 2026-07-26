@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
+import { AppStateProvider } from '@/state/store';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -28,7 +29,13 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link href={FONTS_HREF} rel="stylesheet" />
       </head>
-      <body>{children}</body>
+      <body>
+        {/*
+          The store wraps every route, so client-side navigation keeps the
+          demo's state. A hard refresh still resets it — that is Phase 3's job.
+        */}
+        <AppStateProvider>{children}</AppStateProvider>
+      </body>
     </html>
   );
 }

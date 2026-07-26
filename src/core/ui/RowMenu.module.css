@@ -1,0 +1,51 @@
+.trigger {
+  font: 700 16px var(--font-body);
+  color: var(--muted);
+  padding: 0 6px;
+  line-height: 1;
+}
+
+.compact {
+  font-size: 14px;
+  padding: 0 4px;
+}
+
+/* A dropdown anchored to the row it belongs to. */
+.panel {
+  position: absolute;
+  right: 16px;
+  top: 48px;
+  z-index: 5;
+  min-width: 140px;
+  background: var(--paper);
+  border: 1px solid var(--rule-strong);
+}
+
+.panel .item {
+  display: block;
+  width: 100%;
+  padding: 10px 14px;
+  font: 600 11px var(--font-mono);
+  border-bottom: 1px solid rgba(30, 27, 24, 0.2);
+}
+
+.panel .item:last-child {
+  border-bottom: 0;
+}
+
+/* The rec card opens its actions in place rather than over the card. */
+.inline {
+  display: flex;
+  gap: 14px;
+  margin-top: 8px;
+}
+
+.inline .item {
+  font: 700 10.5px var(--font-mono);
+  color: var(--muted);
+  text-decoration: underline;
+}
+
+.danger {
+  color: var(--accent-red);
+}

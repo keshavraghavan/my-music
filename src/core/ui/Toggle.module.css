@@ -1,0 +1,54 @@
+/* A switch: the design's sliding knob, as a real `role="switch"` button. */
+.track {
+  position: relative;
+  display: inline-block;
+  flex: none;
+  padding: 0;
+  border: 1px solid var(--rule-strong);
+  background: var(--paper);
+  cursor: pointer;
+}
+
+.knob {
+  position: absolute;
+  top: 2px;
+  left: 1px;
+  background: var(--ink);
+  transition: left 0.15s;
+}
+
+.on {
+  background: var(--ink);
+}
+
+.on .knob {
+  background: var(--paper);
+}
+
+.sm {
+  width: 34px;
+  height: 18px;
+}
+
+.sm .knob {
+  width: 12px;
+  height: 12px;
+}
+
+.sm.on .knob {
+  left: 19px;
+}
+
+.md {
+  width: 38px;
+  height: 20px;
+}
+
+.md .knob {
+  width: 14px;
+  height: 14px;
+}
+
+.md.on .knob {
+  left: 21px;
+}

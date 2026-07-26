@@ -1,0 +1,61 @@
+.title {
+  font: 700 30px var(--font-display);
+  margin: 0 0 18px;
+}
+
+.tabs {
+  margin-bottom: 22px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border: 1px solid var(--rule-soft);
+  padding: 16px 18px;
+  margin-bottom: 12px;
+}
+
+.rowBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.rowTitle {
+  font: 700 14px var(--font-body);
+}
+
+.rowNote {
+  font: 400 11px var(--font-mono);
+  color: var(--muted);
+}
+
+.privacyNote {
+  font: 400 12px/1.5 var(--font-body);
+  color: var(--muted);
+  margin: 4px 0 0;
+}
+
+.danger {
+  border-top: 1px solid var(--rule-soft);
+  padding-top: 18px;
+}
+
+.dangerHeading {
+  font: 700 12px var(--font-mono);
+  color: var(--accent-red);
+  letter-spacing: 0.05em;
+  margin: 0 0 8px;
+}
+
+.dangerCopy {
+  font: 400 12px/1.5 var(--font-body);
+  color: var(--muted);
+  margin: 0 0 10px;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}

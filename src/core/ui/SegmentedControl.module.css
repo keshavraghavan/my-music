@@ -1,0 +1,44 @@
+/* The bordered strip of choices: chart tabs, grid density, settings tabs. */
+.group {
+  display: flex;
+  border: 1px solid var(--rule-strong);
+}
+
+.fill {
+  width: 100%;
+}
+
+.option {
+  font: 700 11px var(--font-mono);
+  padding: 6px 16px;
+  color: var(--muted);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.option + .option {
+  border-left: 1px solid var(--rule-strong);
+}
+
+.fill .option {
+  flex: 1;
+  padding: 10px;
+  color: var(--ink);
+}
+
+.xs {
+  font-size: 9.5px;
+  padding: 5px 10px;
+}
+
+.selected {
+  background: var(--ink);
+  color: var(--ink-inverse);
+}
+
+@media (max-width: 720px) {
+  .fill .option {
+    padding: 10px 4px;
+    font-size: 10px;
+  }
+}

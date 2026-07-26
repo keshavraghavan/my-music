@@ -27,22 +27,26 @@ export default tseslint.config(
         'error',
         { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' },
       ],
-      // The app is mid-migration off inline styles (see sx.ts). Until Phase 2
-      // lands CSS Modules, `any` is still the thing we most want to prevent.
+      // The app is mid-migration off inline styles (see sx.ts), so `any` is
+      // still the thing we most want to prevent.
       '@typescript-eslint/no-explicit-any': 'error',
     },
   },
 
-  // Accessibility is a Phase 2 deliverable: today every control is a
-  // <div onClick>, so these rules would report hundreds of pre-existing
-  // violations and drown out new ones. They are set to 'warn' so the debt is
-  // visible in `npm run lint` output without failing CI, and get promoted to
-  // 'error' as Phase 2 converts each screen.
+  // Accessibility was a Phase 2 deliverable and it landed: every control is a
+  // real control, so these rules are errors now rather than the 'warn' that
+  // kept Phase 1's 151-violation backlog visible without failing CI.
   {
     files: ['src/**/*.tsx'],
     rules: {
-      'jsx-a11y/no-static-element-interactions': 'warn',
-      'jsx-a11y/click-events-have-key-events': 'warn',
+      'jsx-a11y/no-static-element-interactions': 'error',
+      'jsx-a11y/click-events-have-key-events': 'error',
+      'jsx-a11y/anchor-is-valid': 'error',
+      'jsx-a11y/aria-props': 'error',
+      'jsx-a11y/aria-role': 'error',
+      'jsx-a11y/label-has-associated-control': 'error',
+      'jsx-a11y/no-noninteractive-element-interactions': 'error',
+      'jsx-a11y/role-has-required-aria-props': 'error',
     },
   },
 

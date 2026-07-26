@@ -1,0 +1,47 @@
+/*
+ * A button that looks like the design's `<div onClick>` but behaves like a
+ * button: keyboard activation, a focus ring, an accessible role, and a
+ * disabled state the browser understands.
+ */
+.button {
+  appearance: none;
+  -webkit-appearance: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-align: inherit;
+  cursor: pointer;
+}
+
+.button:disabled {
+  cursor: default;
+}
+
+/* Variants carry the look; per-instance metrics (padding, exact type size,
+   computed colours) come in through the `css` prop. */
+.solid {
+  background: var(--ink);
+  color: var(--ink-inverse);
+  font: 700 11px var(--font-mono);
+  letter-spacing: 0.05em;
+}
+
+.outline {
+  border: 1px solid var(--rule-strong);
+  font: 700 11px var(--font-mono);
+  letter-spacing: 0.05em;
+}
+
+.link {
+  font: 700 11px var(--font-mono);
+  letter-spacing: 0.04em;
+  text-decoration: underline;
+}
+
+.link:hover {
+  color: var(--accent-red);
+}

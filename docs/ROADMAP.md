@@ -41,6 +41,12 @@ already reflect them.
 Every workflow the product implies, with what actually exists today. This is the
 scope of "fully functional."
 
+> The "Today" column describes the demo as it stood when this was written, and
+> its `App.jsx:NN` references point into the original single-file
+> implementation. Phase 2 decomposed that file — the code moved, the behaviour
+> did not, so every "Needed" below still stands. Section G is annotated with
+> what has since been fixed.
+
 ### A. Identity & access — _does not exist in any form_
 
 | Workflow                      | Today                                                                        | Needed                                                                           |
@@ -130,35 +136,38 @@ scope of "fully functional."
 
 ### G. Cross-cutting gaps
 
-- **URL routing.** One route, `/`. No deep links, no back button, no
-  shareable profile URLs, no SEO. Everything is a `route` string in state.
-- **Accessibility.** Every interactive element is a `<div onClick>` — no
-  `<button>`, no keyboard operability, no focus management in modals, no
-  `aria-*`, no visible focus ring. Drag-reorder is mouse-only.
-- **Responsiveness.** Hardcoded `max-width:1200px`, `width:560px` and fixed
-  pixel type throughout. `sx()` parses inline style strings and **cannot
-  express media queries or `:hover`/`:focus-visible`** — this is a hard
-  blocker on both responsive and accessible styling.
+- ~~**URL routing.**~~ _Fixed in Phase 2._ Every screen has a real route;
+  profiles are shareable at `/[handle]`.
+- ~~**Accessibility.**~~ _Fixed in Phase 2._ Real controls, keyboard
+  operability throughout, focus-trapped dialogs, `aria-live` toasts, a visible
+  focus ring, and a keyboard path for drag-reorder.
+- ~~**Responsiveness.**~~ _Fixed in Phase 2._ Tokens plus a 720px breakpoint;
+  the layout holds from 375px up. `sx()` survives only for card interiors,
+  where it blocks nothing.
 - **No loading, error, or offline states.** Nothing is async today, so none
   exist; every screen needs skeleton + error + retry once data is real.
 - **No validation, rate limiting, CSRF, or authorization layer.**
-- **No tests, types, lint, CI, LICENSE, CONTRIBUTING, or `.env.example`.**
+- ~~**No tests, types, lint, CI, LICENSE, CONTRIBUTING, or `.env.example`.**~~
+  _Fixed in Phase 1._
 
 ---
 
 ## Part 2 — Target architecture
 
+`✅` marks what Phase 2 built; the rest arrives with its phase.
+
 ```
 src/
   app/                        # Next.js routes — real URLs, replacing the `route` string
-    (marketing)/page.tsx              # landing
-    (app)/[handle]/page.tsx           # profile — public, private-locked, or own
-    (app)/home/page.tsx
-    (app)/friends/page.tsx
-    (app)/playlists/[id]/page.tsx
-    (app)/notifications/page.tsx
-    (app)/settings/[tab]/page.tsx
-    onboarding/[step]/page.tsx
+    page.tsx                          # ✅ landing
+    (app)/layout.tsx                  # ✅ signed-in shell: nav, dialogs, toasts
+    (app)/[handle]/page.tsx           # ✅ profile — public or private-locked
+    (app)/home/page.tsx               # ✅
+    (app)/friends/page.tsx            # ✅
+    (app)/playlist/page.tsx           # ✅ → /playlists/[id] in Phase 5
+    (app)/notifications/page.tsx      # ✅
+    (app)/settings/[tab]/page.tsx     # ✅
+    onboarding/[step]/page.tsx        # ✅
     api/auth/[...nextauth]/route.ts
     api/webhooks/…, api/stream/route.ts   # SSE
 
@@ -170,18 +179,25 @@ src/
     feed/                     # activity events, fan-out, pagination
     notifications/            # emit / read / preferences / delivery
     moderation/               # reports, queue, actions
-    page-builder/             # module registry, layout persistence, drag-reorder
-    ui/                       # accessible primitives: Button, Toggle, Modal,
-                              #   Toast, Menu, Field, Card, EmptyState
-    styles/                   # design tokens (CSS custom properties)
+    page-builder/             # ✅ module registry, drag + keyboard reorder,
+                              #   grid, density — layout persistence in Phase 5
+    ui/                       # ✅ accessible primitives: Button, Toggle, Modal,
+                              #   ConfirmDialog, Toast, RowMenu, Field, Avatar,
+                              #   SegmentedControl, EmptyState, Page, TextLink
+    styles/                   # ✅ design tokens (CSS custom properties)
+    routes.ts                 # ✅ every URL in the app, named once
+
+  state/store.tsx             # ✅ interim in-memory store; Phase 3 retires it
 
   domains/music/              # ← swap this folder to build a different site
     providers/                # MusicProvider interface
       mock.ts                 #   works with no API keys — keeps the demo alive
       spotify.ts              #   real OAuth + Web API
       apple.ts                #   stub behind the same interface
+    data/                     # ✅ seeded people, tracks, charts — becomes db/
+    compose/                  # ✅ the search-and-send sheet
     charts/ receipts/ now-playing/ playlists/ recommendations/
-    modules/                  # registers music modules into core/page-builder
+    modules/                  # ✅ the seven modules, registered into page-builder
 ```
 
 ### The three seams that make it a template
@@ -191,24 +207,31 @@ src/
    implementation and the default, so `git clone && npm run dev` works with an
    empty `.env`. Real adapters are drop-in.
 
-2. **Module registry.** `core/page-builder` knows nothing about music. Modules
-   self-register with `{ key, label, accent, defaultSpan, Component,
-loadData }`. Today's seven music modules become registry entries; a photo
-   app registers different ones and the whole drag/toggle/expand/persist
-   machinery is inherited unchanged.
+2. **Module registry** ✅. `core/page-builder` knows nothing about music.
+   `createModuleRegistry([{ key, label, accent, Component }])` takes the list;
+   `domains/music/modules/index.ts` is the whole of MyMusic's home page. A
+   photo app passes a different list and inherits drag, keyboard reorder,
+   toggle, expand and density unchanged. (`loadData` joins the definition in
+   Phase 3, when modules stop reading seeded constants.)
 
-3. **Design tokens.** The retro-transit look (cream `#F2ECDF`, ink `#1E1B18`,
-   four accents, Tinos/JetBrains Mono/Arimo) moves out of ~800 inline style
-   strings into CSS custom properties. Retheming becomes editing one file.
+3. **Design tokens** ✅. The retro-transit look (cream `#F2ECDF`, ink
+   `#1E1B18`, four accents, Tinos/JetBrains Mono/Arimo) lives in
+   `core/styles/tokens.css`, and everything in `core/` reads it from there.
+   Retheming the shell, the primitives and the page metrics is editing that
+   one file; the card interiors follow as `sx()` retires.
 
-### On `sx()` — replace it
+### On `sx()` — being replaced
 
-`src/sx.js` was the right call for design fidelity during the port, but it is
-now the main blocker: inline styles cannot express media queries, `:hover`, or
-`:focus-visible`, so **responsiveness and accessibility are both unreachable
-while it stands**. Migrate to CSS Modules over tokens, component by component,
-as each screen is decomposed. Keep `sx()` working until the last consumer is
-gone so nothing breaks mid-migration.
+`src/sx.ts` was the right call for design fidelity during the port, but inline
+styles cannot express media queries, `:hover`, or `:focus-visible`, which made
+it a blocker on both responsiveness and accessibility.
+
+Phase 2 took the blocking half away: `core/ui`, `core/page-builder`, the shell
+and every page container are CSS Modules over `core/styles/tokens.css`, so the
+breakpoints and focus states live in CSS. What still goes through `sx()` is the
+inside of the cards — verbatim declaration strings from the design — which
+keeps that markup byte-comparable to the source. Those convert as each card
+gains real data in Phases 5–6; `sx()` goes away with the last one.
 
 ---
 
@@ -257,8 +280,8 @@ sent to the client.
 
 ## Part 4 — Phases
 
-Each phase leaves the app runnable, and lands as its own commit on
-`claude/app-workflows-plan-v0cgr8`.
+Each phase leaves the app runnable, and lands on its own branch and pull
+request.
 
 ### Phase 1 — Foundation ✅ _done — no behavior change_
 
@@ -288,17 +311,50 @@ Notes carried forward:
 
 **Shipped:** identical app, now with a safety net.
 
-### Phase 2 — Routing + decomposition _(no behavior change)_
+### Phase 2 — Routing + decomposition ✅ _done — no behavior change_
 
-Replace the `route` string with real App Router routes. Split `App.jsx` into
-per-screen components and module components. Extract `core/ui` primitives —
-and in doing so **fix accessibility**: real `<button>`, keyboard-operable
-toggles and menus, focus-trapped modals, `aria-live` toasts, keyboard
-reordering alongside drag. Introduce design tokens; begin retiring `sx()`.
-Add responsive breakpoints.
-**Ships:** same features, real URLs, keyboard-navigable, works on a phone.
-**Highest-value phase** — everything after it is easier, and it alone fixes
-two defects that would embarrass an OSS release.
+The 1,334-line `App.tsx` is gone. In its place:
+
+- **Real URLs.** `route` in state is deleted; `src/core/routes.ts` is the only
+  place a URL is named. `/`, `/onboarding/[step]`, `/home`, `/friends`,
+  `/[handle]`, `/playlist`, `/notifications`, `/settings/[tab]` — 25
+  prerendered pages, all deep-linkable, back button working. The two friend
+  screens collapsed into one `/[handle]` with a locked state, which is what a
+  profile actually is.
+- **Decomposition.** Screens live with their routes; the seven music modules
+  are components under `domains/music/modules/`, registered into a
+  domain-agnostic `core/page-builder`. State moved to `src/state/store.tsx` — a
+  context store with the same actions the class had, minus what the URL owns.
+- **Accessibility.** Every control is a real control: `<button>`,
+  `role="switch"` toggles, `role="menu"` row menus with arrow keys and Escape,
+  focus-trapped `role="dialog"` modals that restore focus on close, an
+  `aria-live` toast region, labelled inputs with `aria-invalid`/
+  `aria-describedby`, `aria-current` navigation, a skip link, and one visible
+  focus ring. **Drag reorder now has a keyboard path**: the ✥ handle is a
+  button that moves a module with the arrow keys and announces its position.
+  Phase 1's 151 `jsx-a11y` warnings are zero, and the rules are `error`.
+- **Responsive.** Page containers, the shell, the module grid and both modals
+  are CSS Modules over tokens with one breakpoint at 720px. The e2e suite
+  asserts no horizontal overflow at 375px.
+- **Design tokens.** `core/styles/tokens.css` holds the palette, the three
+  typefaces and the page metrics; retheming is editing one file.
+
+Notes carried forward:
+
+- **`sx()` is retired, not gone.** Primitives, layout, the shell and the grid
+  are CSS Modules; card interiors still pass verbatim declaration strings from
+  the design through `sx()`, which keeps the port byte-comparable. Those
+  convert as each card gains real behaviour in Phases 5–6. The blocker it
+  represented is lifted: media queries and `:focus-visible` live in CSS now.
+- **Resolved from Phase 1:** the doubled-period toast bug (`core/text.ts`'s
+  `endSentence()`), the dead `compose.showDup` field, and the Prettier
+  exclusion on `App.tsx`.
+- **State still resets on refresh.** Navigation is client-side so state
+  survives it, but a hard reload starts fresh — the store is memory. Phase 3.
+- **Recommendations still only reach Theo's wall.** Phase 2 changed no
+  behaviour, so the design's single seeded wall stands; Phase 5 fixes it.
+
+**Shipped:** same features, real URLs, keyboard-navigable, works on a phone.
 
 ### Phase 3 — Data layer
 
