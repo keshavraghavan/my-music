@@ -15,15 +15,13 @@ describe('onboarding', () => {
     expect(screen.queryByText('STEP 1 / 5')).not.toBeInTheDocument();
   });
 
-  it('enters the flow at step 1 of 5, at its own URL', async () => {
+  it('routes new arrivals through authentication before onboarding', async () => {
     const user = userEvent.setup();
     renderApp();
 
     await user.click(screen.getByRole('link', { name: 'GET STARTED →' }));
 
-    expect(testRouter.path).toBe('/onboarding/1');
-    expect(screen.getByText('STEP 1 / 5')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Welcome aboard' })).toBeInTheDocument();
+    expect(testRouter.path).toBe('/login');
   });
 
   it('advances and steps back through the flow', async () => {

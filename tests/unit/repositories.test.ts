@@ -22,6 +22,7 @@ beforeAll(async () => {
   await database.insert(users).values([
     { id: 'juno', name: 'Juno Reyes' },
     { id: 'theok', name: 'Theo K.' },
+    { id: 'generated-user-id', name: 'Alice Listener' },
   ]);
   await database.insert(profiles).values([
     {
@@ -43,6 +44,15 @@ beforeAll(async () => {
       city: 'Bushwick, Brooklyn',
       timezone: 'America/New_York',
     },
+    {
+      userId: 'generated-user-id',
+      handle: 'alice_listens',
+      displayName: 'Alice Listener',
+      initials: 'AL',
+      color: '#315A72',
+      city: '',
+      timezone: 'UTC',
+    },
   ]);
   await database
     .insert(follows)
@@ -53,14 +63,22 @@ beforeAll(async () => {
 
 describe('DemoRepository', () => {
   it('lists persisted profiles in the directory shape', async () => {
-    await expect(repository.listPeople()).resolves.toEqual([
-      expect.objectContaining({
-        id: 'theok',
-        name: 'Theo K.',
-        handle: 'theok_fm',
-        private: false,
-      }),
-    ]);
+    const people = await repository.listPeople();
+    expect(people).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'theok',
+          name: 'Theo K.',
+          handle: 'theok_fm',
+          private: false,
+        }),
+        expect.objectContaining({
+          id: 'generated-user-id',
+          name: 'Alice Listener',
+          handle: 'alice_listens',
+        }),
+      ]),
+    );
   });
 
   it('looks handles up case-insensitively and excludes the current owner', async () => {

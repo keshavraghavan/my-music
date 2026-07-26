@@ -4,10 +4,10 @@ import type { AppState, Person } from '@/types';
 import { getDatabase } from './client';
 import { DemoRepository, fallbackSnapshot } from './repositories/demo';
 
-export async function loadAppSnapshot(): Promise<AppState> {
+export async function loadAppSnapshot(viewerId = 'juno'): Promise<AppState> {
   const database = getDatabase();
   if (!database) return fallbackSnapshot();
-  return new DemoRepository(database).getAppSnapshot();
+  return new DemoRepository(database).getAppSnapshot(viewerId);
 }
 
 export async function loadPersonByHandle(handle: string): Promise<Person | undefined> {
