@@ -2,9 +2,8 @@
 
 import { routes } from '@/core/routes';
 import { Avatar, Button, Page, TextLink } from '@/core/ui';
-import { ME, PEOPLE } from '@/domains/music/data/people';
 import sx from '@/sx';
-import { useAppActions, useAppState } from '@/state/store';
+import { useAppActions, useAppState } from '@/state/client-store';
 import type { Person } from '@/types';
 import styles from './profile.module.css';
 
@@ -15,7 +14,7 @@ import styles from './profile.module.css';
  * which is what a real profile is.
  */
 export function ProfileScreen({ person }: { person: Person }) {
-  const { relations, theoWall } = useAppState();
+  const { relations, theoWall, me, people } = useAppState();
   const actions = useAppActions();
   const relation = relations[person.id];
 
@@ -62,11 +61,11 @@ export function ProfileScreen({ person }: { person: Person }) {
             {wall.map((post) => {
               const author =
                 post.personId === 'me'
-                  ? { name: ME.name.toUpperCase(), color: ME.color, initials: ME.initials }
+                  ? { name: me.name.toUpperCase(), color: me.color, initials: me.initials }
                   : {
-                      name: PEOPLE[post.personId].name.toUpperCase(),
-                      color: PEOPLE[post.personId].color,
-                      initials: PEOPLE[post.personId].initials,
+                      name: people[post.personId].name.toUpperCase(),
+                      color: people[post.personId].color,
+                      initials: people[post.personId].initials,
                     };
               const fresh = post.time === 'JUST NOW';
               return (

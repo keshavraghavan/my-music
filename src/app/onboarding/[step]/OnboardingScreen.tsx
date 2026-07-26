@@ -6,7 +6,7 @@ import { Avatar, Button, CenteredPage, Field, Toggle } from '@/core/ui';
 import { musicModules } from '@/domains/music/modules';
 import { isHandleTaken } from '@/domains/music/data/people';
 import sx from '@/sx';
-import { useAppActions, useAppState } from '@/state/store';
+import { useAppActions, useAppState } from '@/state/client-store';
 import type { ServiceKey } from '@/types';
 import styles from './onboarding.module.css';
 
@@ -41,10 +41,14 @@ const SERVICES: { key: ServiceKey; name: string; badge: string; note: string; co
  */
 export function OnboardingScreen({ step }: { step: number }) {
   const router = useRouter();
-  const { ob, connected, modules } = useAppState();
+  const { ob, connected, modules, people } = useAppState();
   const actions = useAppActions();
 
-  const handleTaken = isHandleTaken(ob.handle);
+  const handleTaken = isHandleTaken(
+    ob.handle,
+    undefined,
+    Object.values(people).map((person) => person.handle),
+  );
   const blocked = step === 3 && handleTaken;
   const noServiceConnected = !connected.spotify && !connected.apple;
 

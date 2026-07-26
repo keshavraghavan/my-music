@@ -2,9 +2,7 @@
 
 import { ModuleCard } from '@/core/page-builder';
 import sx from '@/sx';
-import { useAppState } from '@/state/store';
-import { ME } from '../data/people';
-import { monthlyReceipt, RECEIPT_META } from '../data/listening';
+import { useAppState } from '@/state/client-store';
 
 const CARD_CSS =
   "background:#F2ECDF;padding:20px 22px 16px;max-width:320px;margin:0 auto;font-family:'JetBrains Mono'";
@@ -13,9 +11,8 @@ const HANDLE_CSS = 'top:8px;right:6px;color:rgba(30,27,24,0.35)';
 const DASHES = '-'.repeat(38);
 
 export function ReceiptModule() {
-  const { connected } = useAppState();
+  const { connected, me, receiptLines: lines, receiptMeta } = useAppState();
   const noService = !connected.spotify && !connected.apple;
-  const lines = monthlyReceipt();
 
   return (
     <ModuleCard
@@ -53,15 +50,15 @@ export function ReceiptModule() {
           <div style={sx("font:400 11px/1.7 'JetBrains Mono';color:#1E1B18")}>
             <div style={sx('display:flex;justify-content:space-between')}>
               <span>STATION</span>
-              <span>{RECEIPT_META.station}</span>
+              <span>{receiptMeta.station}</span>
             </div>
             <div style={sx('display:flex;justify-content:space-between')}>
               <span>DATE</span>
-              <span>{RECEIPT_META.date}</span>
+              <span>{receiptMeta.date}</span>
             </div>
             <div style={sx('display:flex;justify-content:space-between')}>
               <span>RIDER ID</span>
-              <span>@{ME.handle.toUpperCase()}</span>
+              <span>@{me.handle.toUpperCase()}</span>
             </div>
           </div>
           <div
@@ -103,7 +100,7 @@ export function ReceiptModule() {
             )}
           >
             <span>TOTAL RIDE TIME</span>
-            <span>{RECEIPT_META.totalRideTime}</span>
+            <span>{receiptMeta.totalRideTime}</span>
           </div>
         </>
       )}

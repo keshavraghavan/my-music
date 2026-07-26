@@ -13,18 +13,17 @@ import {
   RowMenuTrigger,
   TextLink,
 } from '@/core/ui';
-import { PEOPLE, PEOPLE_LIST } from '@/domains/music/data/people';
-import { useAppActions, useAppState } from '@/state/store';
+import { useAppActions, useAppState } from '@/state/client-store';
 import type { Person, PersonId } from '@/types';
 import styles from './friends.module.css';
 
 /** Search the directory, follow people, and manage who you already follow. */
 export default function FriendsPage() {
-  const { relations, friendSearch, openFriendMenu } = useAppState();
+  const { relations, friendSearch, openFriendMenu, people } = useAppState();
   const actions = useAppActions();
 
   const query = friendSearch.trim().toLowerCase();
-  const pool = PEOPLE_LIST.filter(
+  const pool = Object.values(people).filter(
     (p) => relations[p.id] !== 'friend' && relations[p.id] !== 'blocked',
   );
   const matches = query
@@ -35,7 +34,7 @@ export default function FriendsPage() {
 
   const friends = (Object.keys(relations) as PersonId[])
     .filter((id) => relations[id] === 'friend')
-    .map((id) => PEOPLE[id]);
+    .map((id) => people[id]);
 
   return (
     <Page width="medium">

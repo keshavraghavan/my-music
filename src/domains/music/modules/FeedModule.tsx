@@ -2,17 +2,18 @@
 
 import { ModuleCard } from '@/core/page-builder';
 import sx from '@/sx';
-import { FEED_ITEMS } from '../data/listening';
+import { useAppState } from '@/state/client-store';
 import styles from './modules.module.css';
 
 const CARD_CSS = 'border:1px solid rgba(30,27,24,0.3);padding:22px 24px';
 
 export function FeedModule() {
+  const { feedItems } = useAppState();
   return (
     <ModuleCard moduleKey="feed" label="Line Updates" css={CARD_CSS}>
       <h2 className={styles.title}>Line Updates</h2>
       <ul className={styles.list}>
-        {FEED_ITEMS.map((item) => (
+        {feedItems.map((item) => (
           <li
             key={item.text}
             style={sx(

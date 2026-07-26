@@ -12,14 +12,13 @@ import {
   TextLink,
 } from '@/core/ui';
 import sx from '@/sx';
-import { useAppActions, useAppState } from '@/state/store';
-import { PEOPLE } from '../data/people';
+import { useAppActions, useAppState } from '@/state/client-store';
 import styles from './modules.module.css';
 
 const CARD_CSS = 'border:1px solid rgba(30,27,24,0.3);padding:22px 24px';
 
 export function RecsModule() {
-  const { recs, openRecMenu } = useAppState();
+  const { recs, openRecMenu, people } = useAppState();
   const actions = useAppActions();
   const active = recs.filter((r) => r.status === 'active');
 
@@ -29,7 +28,7 @@ export function RecsModule() {
       {active.length > 0 ? (
         <ul className={styles.list}>
           {active.map((rec) => {
-            const person = PEOPLE[rec.personId];
+            const person = people[rec.personId];
             return (
               <li
                 key={rec.id}

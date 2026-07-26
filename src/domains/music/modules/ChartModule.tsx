@@ -4,17 +4,16 @@ import { ModuleCard } from '@/core/page-builder';
 import { accent } from '@/core/styles/accents';
 import { SegmentedControl, SegmentedOption } from '@/core/ui';
 import sx from '@/sx';
-import { useAppActions, useAppState } from '@/state/store';
-import { TOP_ALBUMS, TOP_SONGS } from '../data/listening';
+import { useAppActions, useAppState } from '@/state/client-store';
 import styles from './modules.module.css';
 
 const CARD_CSS = 'border:1px solid rgba(30,27,24,0.3);padding:22px 24px';
 
 export function ChartModule() {
-  const { connected, chartTab } = useAppState();
+  const { connected, chartTab, topSongs, topAlbums } = useAppState();
   const actions = useAppActions();
   const noService = !connected.spotify && !connected.apple;
-  const items = chartTab === 'songs' ? TOP_SONGS : TOP_ALBUMS;
+  const items = chartTab === 'songs' ? topSongs : topAlbums;
 
   return (
     <ModuleCard moduleKey="chart" label="Top 50 chart" css={CARD_CSS}>

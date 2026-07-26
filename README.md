@@ -9,24 +9,34 @@ after transit-system print ephemera: cream paper, rule lines, and a monthly
 
 Implemented from the `Retro Music Social` design as a standalone Next.js app.
 
-> **Status: demo becoming an app.** Everything below runs, but the data is
-> seeded in memory and the integrations are simulated — a refresh resets it.
+> **Status: demo becoming an app.** The read model is now persisted in
+> Postgres; Phase 3 deliberately leaves mutations simulated until the social
+> workflows land in Phase 5.
 > [`docs/ROADMAP.md`](docs/ROADMAP.md) inventories every workflow and sequences
 > the work to make it real. Phase 1 (TypeScript, tests, CI) and Phase 2 (real
-> routes, accessible components, responsive layout) are done; Phase 3 adds the
-> database.
+> routes, accessible components, responsive layout) and Phase 3 (Postgres,
+> Drizzle, repositories, server reads) are done.
 
 ## Running it
 
 ```bash
 npm install
 npm run dev      # dev server with fast refresh, on :3000
-npm run build    # static export to out/
-npm run preview  # serve the exported build
+npm run build    # production build
+npm run preview  # run the production server
 ```
 
-No configuration required — no database, no API keys, no `.env`. That is
-deliberate and meant to stay true: see [`.env.example`](.env.example).
+No configuration is required to see the app: without `DATABASE_URL`, server
+components use the bundled fixture snapshot. To develop against persistent
+Postgres:
+
+```bash
+docker compose up -d
+cp .env.example .env.local
+npm run db:migrate
+npm run db:seed
+npm run dev
+```
 
 ## Developing
 
@@ -81,12 +91,11 @@ The app models the states a real integration hits, not just the happy path:
 
 ## Notes on the implementation
 
-- **No backend.** All data is seeded in `src/state/store.tsx`; actions mutate it
-  in memory. Client-side navigation keeps it, a hard refresh resets it.
-- **Next.js App Router**, configured for static export (`output: 'export'`), so
-  `npm run build` emits a prerendered site to `out/` — 25 pages, no Node
-  runtime needed. To serve from a sub-path, set `basePath` and `assetPrefix` in
-  `next.config.mjs`.
+- **Postgres + Drizzle.** Server Components hydrate the UI from repository
+  queries. `src/state/client-store.tsx` holds only transient UI state and
+  Phase 3's intentionally stubbed mutations.
+- **Next.js App Router** with the full server runtime. Profile handles resolve
+  dynamically from the database rather than a static path list.
 - **Routes are the state.** Which screen you are on, which onboarding step,
   which settings tab and whose profile are all URLs;
   [`src/core/routes.ts`](src/core/routes.ts) is the only place one is named.

@@ -15,10 +15,10 @@ export const TRACK_POOL: Track[] = [
   { title: 'Last Train Home', artist: 'Wilder Sun' },
 ];
 
-export function filterTracks(query: string): Track[] {
-  if (!query) return TRACK_POOL;
+export function filterTracks(query: string, pool: Track[] = TRACK_POOL): Track[] {
+  if (!query) return pool;
   const q = query.toLowerCase();
-  return TRACK_POOL.filter(
+  return pool.filter(
     (t) => t.title.toLowerCase().includes(q) || t.artist.toLowerCase().includes(q),
   );
 }

@@ -4,18 +4,17 @@ import { ModuleCard } from '@/core/page-builder';
 import { routes } from '@/core/routes';
 import { Avatar, EmptyState, TextLink } from '@/core/ui';
 import sx from '@/sx';
-import { useAppState } from '@/state/store';
-import { PEOPLE } from '../data/people';
+import { useAppState } from '@/state/client-store';
 import styles from './modules.module.css';
 import type { PersonId } from '@/types';
 
 const CARD_CSS = 'border:1px solid rgba(30,27,24,0.3);padding:22px 24px';
 
 export function FriendsListModule() {
-  const { relations } = useAppState();
+  const { relations, people } = useAppState();
   const friends = (Object.keys(relations) as PersonId[])
     .filter((id) => relations[id] === 'friend')
-    .map((id) => PEOPLE[id]);
+    .map((id) => people[id]);
 
   return (
     <ModuleCard moduleKey="friendsList" label="Friends List" css={CARD_CSS}>

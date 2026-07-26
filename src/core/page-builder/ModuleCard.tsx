@@ -3,7 +3,7 @@
 import type { KeyboardEvent, ReactNode } from 'react';
 import { Button } from '@/core/ui';
 import sx from '@/sx';
-import { useAppActions, useAppState } from '@/state/store';
+import { useAppActions, useAppState } from '@/state/client-store';
 import type { ModuleKey } from '@/types';
 import styles from './ModuleCard.module.css';
 

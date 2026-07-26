@@ -2,8 +2,8 @@
 
 import { routes } from '@/core/routes';
 import { Avatar, Button, Field, Page, SegmentedControl, SegmentedLink, Toggle } from '@/core/ui';
-import { isHandleTaken, ME } from '@/domains/music/data/people';
-import { useAppActions, useAppState } from '@/state/store';
+import { isHandleTaken } from '@/domains/music/data/people';
+import { useAppActions, useAppState } from '@/state/client-store';
 import type { NotifPrefKey, ServiceKey, SettingsTab } from '@/types';
 import styles from './settings.module.css';
 
@@ -27,9 +27,13 @@ const NOTIF_PREFS: { key: NotifPrefKey; label: string }[] = [
 
 /** Settings, one tab per URL — so "send me the privacy tab" is a link. */
 export function SettingsScreen({ tab }: { tab: SettingsTab }) {
-  const { accountForm, connected, isPrivateProfile, notifPrefs } = useAppState();
+  const { accountForm, connected, isPrivateProfile, notifPrefs, me, people } = useAppState();
   const actions = useAppActions();
-  const handleTaken = isHandleTaken(accountForm.handle, ME.handle);
+  const handleTaken = isHandleTaken(
+    accountForm.handle,
+    me.handle,
+    Object.values(people).map((person) => person.handle),
+  );
 
   return (
     <Page width="reading">

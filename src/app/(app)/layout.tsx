@@ -5,8 +5,7 @@ import { useEffect, type ReactNode } from 'react';
 import { routes } from '@/core/routes';
 import { Avatar, ConfirmDialog, TextLink, Toast, cx } from '@/core/ui';
 import { ComposeModal } from '@/domains/music/compose/ComposeModal';
-import { ME } from '@/domains/music/data/people';
-import { useAppActions, useAppState } from '@/state/store';
+import { useAppActions, useAppState } from '@/state/client-store';
 import styles from './shell.module.css';
 
 // `match` is the URL prefix the tab owns; `href` is where clicking it lands.
@@ -31,7 +30,7 @@ const DANGEROUS = ['block', 'delete-account', 'report-rec'];
 export default function AppLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { notifications, compose, confirm, toast } = useAppState();
+  const { notifications, compose, confirm, toast, me } = useAppState();
   const actions = useAppActions();
 
   const unread = notifications.filter((n) => !n.read).length;
@@ -83,11 +82,11 @@ export default function AppLayout({ children }: { children: ReactNode }) {
             })}
           </nav>
           <Avatar
-            initials={ME.initials}
+            initials={me.initials}
             size={30}
             css="font-family:'Tinos'"
             decorative={false}
-            aria-label={`Signed in as ${ME.name}`}
+            aria-label={`Signed in as ${me.name}`}
           />
         </div>
       </header>

@@ -3,15 +3,14 @@
 import { ModuleGrid, ModuleToggleList } from '@/core/page-builder';
 import { routes } from '@/core/routes';
 import { Avatar, Button, Page, TextLink } from '@/core/ui';
-import { ME } from '@/domains/music/data/people';
 import { musicModules } from '@/domains/music/modules';
-import { useAppActions, useAppState } from '@/state/store';
+import { useAppActions, useAppState } from '@/state/client-store';
 import type { PersonId } from '@/types';
 import styles from './home.module.css';
 
 /** Your page: the modules you chose, in the order you put them. */
 export default function HomePage() {
-  const { connected, isPrivateProfile, relations, editMode } = useAppState();
+  const { connected, isPrivateProfile, relations, editMode, me } = useAppState();
   const actions = useAppActions();
 
   const noService = !connected.spotify && !connected.apple;
@@ -32,15 +31,15 @@ export default function HomePage() {
 
       <div className={styles.frame}>
         <div className={styles.profile}>
-          <Avatar initials={ME.initials} size={76} css="font-family:'Tinos';font-size:26px" />
+          <Avatar initials={me.initials} size={76} css="font-family:'Tinos';font-size:26px" />
           <div className={styles.identity}>
-            <h1 className={styles.name}>{ME.name}</h1>
+            <h1 className={styles.name}>{me.name}</h1>
             <div className={styles.meta}>
-              @{ME.handle.toUpperCase()} ｜ {ME.city.toUpperCase()}
+              @{me.handle.toUpperCase()} ｜ {me.city.toUpperCase()}
               {isPrivateProfile && <> ｜ 🔒 PRIVATE</>}
             </div>
           </div>
-          <p className={styles.bio}>“{ME.bio}”</p>
+          <p className={styles.bio}>“{me.bio}”</p>
           <Button
             variant="outline"
             aria-pressed={editMode}
@@ -72,7 +71,7 @@ export default function HomePage() {
       <div className={styles.footer}>
         <span>© 2026 MYMUSIC</span>
         <span>SET IN TINOS, JETBRAINS MONO &amp; ARIMO</span>
-        <span>RUN ON THE {ME.handle.toUpperCase()} LINE</span>
+        <span>RUN ON THE {me.handle.toUpperCase()} LINE</span>
       </div>
     </Page>
   );

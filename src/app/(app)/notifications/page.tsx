@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { routes } from '@/core/routes';
 import { Button, Page, cx } from '@/core/ui';
-import { useAppActions, useAppState } from '@/state/store';
+import { useAppActions, useAppState } from '@/state/client-store';
 import type { NotificationKind } from '@/types';
 import styles from './notifications.module.css';
 

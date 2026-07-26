@@ -10,9 +10,17 @@ import {
   type ReactNode,
 } from 'react';
 import { endSentence } from '@/core/text';
-import { PLAYLIST_NAME } from '@/domains/music/data/listening';
+import {
+  FEED_ITEMS,
+  monthlyReceipt,
+  NOW_PLAYING,
+  PLAYLIST_NAME,
+  RECEIPT_META,
+  TOP_ALBUMS,
+  TOP_SONGS,
+} from '@/domains/music/data/listening';
 import { isHandleTaken, isPersonId, ME, PEOPLE } from '@/domains/music/data/people';
-import { filterTracks } from '@/domains/music/data/tracks';
+import { filterTracks, TRACK_POOL } from '@/domains/music/data/tracks';
 import type {
   AppState,
   ChartTab,
@@ -29,19 +37,27 @@ import type {
 } from '@/types';
 
 /*
- * The in-memory store.
+ * The Phase 3 client store.
  *
- * This is what `App.tsx`'s class state was, minus everything the URL now owns.
- * It does not live in core/ on purpose: it still mixes domain-agnostic state
- * (profile, relations, notifications) with music state (playlists, monthly
- * picks, service connections). Phase 3 replaces it with the database and the
- * split happens there — see docs/ROADMAP.md.
+ * Persisted values arrive from a Server Component through `initialState`.
+ * The state kept here is transient UI state plus deliberately stubbed
+ * mutations; Phase 5 replaces those stubs with server writes.
  */
 
 const TOAST_MS = 2600;
 
 // prettier-ignore
 export const INITIAL_STATE: AppState = {
+  me: { id: 'me', userId: 'juno', ...ME },
+  people: PEOPLE,
+  catalog: TRACK_POOL,
+  topSongs: TOP_SONGS,
+  topAlbums: TOP_ALBUMS,
+  nowPlaying: NOW_PLAYING,
+  receiptMeta: RECEIPT_META,
+  receiptLines: monthlyReceipt(),
+  feedItems: FEED_ITEMS,
+  playlistName: PLAYLIST_NAME,
   ob: { name: 'Juno Reyes', handle: 'junotapes2', bio: '' },
   modules: { feed: true, nowPlaying: true, chart: true, monthly: true, receipt: true, recs: true, friendsList: true },
   chartTab: 'songs',
@@ -241,7 +257,7 @@ export function AppStateProvider({
       setRelation,
       addFriend: (id) => {
         setRelation(id, 'friend');
-        showToast(endSentence(`You're now friends with ${PEOPLE[id].name}`));
+        showToast(endSentence(`You're now friends with ${latest.current.people[id].name}`));
       },
       requestFollow: (id) => setRelation(id, 'requested'),
       setFriendSearch: (friendSearch) => setState((s) => ({ ...s, friendSearch })),
@@ -256,7 +272,7 @@ export function AppStateProvider({
             open: true,
             kind: 'remove',
             title: 'Remove friend?',
-            message: `${PEOPLE[id].name} will no longer see your page updates, and you won't see theirs.`,
+            message: `${latest.current.people[id].name} will no longer see your page updates, and you won't see theirs.`,
             confirmLabel: 'REMOVE',
             payload: id,
           },
@@ -269,7 +285,7 @@ export function AppStateProvider({
             open: true,
             kind: 'block',
             title: 'Block this person?',
-            message: `${PEOPLE[id].name} won't be able to view your page or send you recommendations.`,
+            message: `${latest.current.people[id].name} won't be able to view your page or send you recommendations.`,
             confirmLabel: 'BLOCK',
             payload: id,
           },
@@ -378,7 +394,7 @@ export function AppStateProvider({
       submitCompose: () => {
         const s = latest.current;
         const { compose } = s;
-        const results = filterTracks(compose.query);
+        const results = filterTracks(compose.query, s.catalog);
         const track = compose.selectedIdx == null ? null : results[compose.selectedIdx];
         if (!track) {
           showToast('Pick a track first.');
@@ -420,7 +436,7 @@ export function AppStateProvider({
             ...prev,
             playlistTracks: duplicate
               ? prev.playlistTracks.map((t) =>
-                  t.id === duplicate.id ? { ...t, addedBy: [...t.addedBy, ME.name] } : t,
+                  t.id === duplicate.id ? { ...t, addedBy: [...t.addedBy, s.me.name] } : t,
                 )
               : [
                   ...prev.playlistTracks,
@@ -428,12 +444,12 @@ export function AppStateProvider({
                     id: `pt${Date.now()}`,
                     title: track.title,
                     artist: track.artist,
-                    addedBy: [ME.name],
+                    addedBy: [s.me.name],
                   },
                 ],
             compose: { ...prev.compose, open: false },
           }));
-          showToast(`Added ${track.title} to ${PLAYLIST_NAME}.`);
+          showToast(`Added ${track.title} to ${s.playlistName}.`);
           return;
         }
 
@@ -454,7 +470,7 @@ export function AppStateProvider({
           ],
           compose: { ...prev.compose, open: false },
         }));
-        const recipient = compose.targetFriendId ? PEOPLE[compose.targetFriendId].name : 'their';
+        const recipient = compose.targetFriendId ? s.people[compose.targetFriendId].name : 'their';
         showToast(`Posted to ${recipient}'s wall.`);
       },
 
@@ -477,7 +493,14 @@ export function AppStateProvider({
         setState((s) => ({ ...s, accountForm: { ...s.accountForm, [field]: value } })),
       saveAccount: () => {
         const { accountForm } = latest.current;
-        if (isHandleTaken(accountForm.handle, ME.handle)) return;
+        if (
+          isHandleTaken(
+            accountForm.handle,
+            latest.current.me.handle,
+            Object.values(latest.current.people).map((person) => person.handle),
+          )
+        )
+          return;
         showToast('Profile updated.');
       },
       askDeleteAccount: () =>
@@ -515,13 +538,13 @@ export function AppStateProvider({
           case 'remove':
             if (payload && isPersonId(payload)) {
               setRelation(payload, 'none');
-              showToast(endSentence(`Removed ${PEOPLE[payload].name} as a friend`));
+              showToast(endSentence(`Removed ${latest.current.people[payload].name} as a friend`));
             }
             break;
           case 'block':
             if (payload && isPersonId(payload)) {
               setRelation(payload, 'blocked');
-              showToast(endSentence(`Blocked ${PEOPLE[payload].name}`));
+              showToast(endSentence(`Blocked ${latest.current.people[payload].name}`));
             }
             break;
           case 'report-rec':
