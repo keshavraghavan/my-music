@@ -4,17 +4,9 @@
 // docs/ROADMAP.md land, the persisted subset of this file moves to the Drizzle
 // schema and the domain-agnostic half moves to core/ — so treat this as the
 // staging ground for that split rather than a permanent home.
-
-export type Route =
-  | 'landing'
-  | 'onboard'
-  | 'home'
-  | 'friends'
-  | 'friend'
-  | 'friend-locked'
-  | 'notifications'
-  | 'settings'
-  | 'playlist';
+//
+// Phase 2 removed `Route`: which screen is showing is now the URL's job, and
+// `src/core/routes.ts` is the only place that names one.
 
 export type ModuleKey =
   'feed' | 'nowPlaying' | 'chart' | 'monthly' | 'receipt' | 'recs' | 'friendsList';
@@ -27,6 +19,7 @@ export type AuthorId = PersonId | 'me';
 
 export type Relation = 'none' | 'requested' | 'friend' | 'blocked';
 export type ServiceKey = 'spotify' | 'apple';
+export type ServiceName = 'Spotify' | 'Apple Music';
 export type Spacing = 'compact' | 'comfortable' | 'spacious';
 export type SettingsTab = 'account' | 'services' | 'privacy' | 'notifs';
 export type ChartTab = 'songs' | 'albums';
@@ -112,13 +105,6 @@ export interface ComposeState {
   selectedIdx: number | null;
   note: string;
   addAnyway: boolean;
-  /**
-   * Written by postRecommendation() on a duplicate playlist add, but never
-   * read — the modal's warning is derived independently as
-   * `showDuplicateWarning` in renderVals(). Kept so the conversion to
-   * TypeScript stays behaviour-preserving; removed in Phase 2.
-   */
-  showDup?: boolean;
 }
 
 export interface ConfirmState {
@@ -131,9 +117,12 @@ export interface ConfirmState {
   payload: string | null;
 }
 
+/**
+ * Everything the app holds in memory. The screen you are on is not in here —
+ * that is the URL — and neither is the onboarding step or the settings tab,
+ * for the same reason.
+ */
 export interface AppState {
-  route: Route;
-  onboardStep: number;
   ob: ProfileForm;
   modules: Record<ModuleKey, boolean>;
   chartTab: ChartTab;
@@ -151,7 +140,6 @@ export interface AppState {
   relations: Record<PersonId, Relation>;
   friendSearch: string;
   openFriendMenu: PersonId | null;
-  viewingFriendId: PersonId | null;
 
   recs: Rec[];
   openRecMenu: string | null;
@@ -165,6 +153,5 @@ export interface AppState {
   toast: string | null;
 
   accountForm: ProfileForm;
-  settingsTab: SettingsTab;
   notifPrefs: Record<NotifPrefKey, boolean>;
 }

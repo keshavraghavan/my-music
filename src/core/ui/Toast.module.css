@@ -1,0 +1,23 @@
+/*
+ * The live region is always mounted, empty or not: assistive tech only
+ * announces changes to a region it was already watching.
+ */
+.region {
+  position: fixed;
+  bottom: 24px;
+  left: 0;
+  right: 0;
+  z-index: 70;
+  display: flex;
+  justify-content: center;
+  padding: 0 16px;
+  pointer-events: none;
+}
+
+.toast {
+  background: var(--ink);
+  color: var(--ink-inverse);
+  font: 600 12.5px var(--font-body);
+  padding: 12px 22px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+}

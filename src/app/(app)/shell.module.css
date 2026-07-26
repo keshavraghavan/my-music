@@ -1,0 +1,80 @@
+.shell {
+  border-bottom: 1px solid var(--rule);
+  background: var(--paper);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.bar {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--shell-pad-y) var(--shell-pad-x);
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  flex-wrap: wrap;
+}
+
+.wordmark {
+  font: 700 22px var(--font-display);
+  flex: none;
+  color: var(--ink);
+}
+
+.wordmark:hover {
+  color: var(--ink);
+}
+
+.nav {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+  flex-wrap: wrap;
+}
+
+.navLink {
+  font: 700 11px var(--font-mono);
+  letter-spacing: 0.05em;
+  padding: 8px 12px;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.navLink:hover {
+  color: var(--ink);
+}
+
+.navLinkActive {
+  background: var(--ink);
+  color: var(--ink-inverse);
+}
+
+.navLinkActive:hover {
+  color: var(--ink-inverse);
+}
+
+.badge {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--accent-red);
+  color: var(--ink-inverse);
+  font: 700 9px var(--font-body);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (max-width: 720px) {
+  .bar {
+    gap: 12px;
+  }
+
+  .navLink {
+    padding: 8px 8px;
+    font-size: 10px;
+  }
+}

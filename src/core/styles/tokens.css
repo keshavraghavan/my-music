@@ -1,0 +1,76 @@
+/*
+ * Design tokens — the retro-transit look, in one place.
+ *
+ * Retheming the app is editing this file: the palette, the three typefaces and
+ * the page metrics are all referenced by `var(--…)` from the CSS Modules in
+ * core/ui and core/page-builder. See docs/ROADMAP.md — Part 2, seam 3.
+ *
+ * Screen interiors still carry verbatim inline styles from the design (see
+ * src/sx.ts); those migrate onto these tokens as each card is converted.
+ */
+
+:root {
+  /* Palette */
+  --paper: #f2ecdf;
+  --ink: #1e1b18;
+  --ink-inverse: #f2ecdf;
+  --muted: #6b6156;
+
+  --accent-red: #b7472a;
+  --accent-green: #3f6b4f;
+  --accent-gold: #c9a227;
+  --accent-blue: #2f5673;
+
+  /* Rules — the print-ephemera hairlines, by weight. */
+  --rule-strong: rgba(30, 27, 24, 0.4);
+  --rule: rgba(30, 27, 24, 0.35);
+  --rule-soft: rgba(30, 27, 24, 0.3);
+  --rule-faint: rgba(30, 27, 24, 0.25);
+
+  /* Type. Each is metric-compatible with its fallback, so the layout holds if
+     the webfont never arrives. */
+  --font-display: 'Tinos', 'Times New Roman', serif;
+  --font-mono: 'JetBrains Mono', 'Courier New', monospace;
+  --font-body: 'Arimo', Arial, sans-serif;
+
+  /* Page metrics. The narrow values below the breakpoint are what make the
+     app usable on a phone — the design's fixed 40px gutters are not. */
+  --page-pad-x: 40px;
+  --page-pad-top: 30px;
+  --page-pad-bottom: 60px;
+  --shell-pad-x: 40px;
+  --shell-pad-y: 14px;
+  --card-pad-x: 32px;
+
+  --focus-ring-color: var(--accent-blue);
+}
+
+/* Single breakpoint: one column, tighter gutters. */
+@media (max-width: 720px) {
+  :root {
+    --page-pad-x: 18px;
+    --page-pad-top: 20px;
+    --page-pad-bottom: 40px;
+    --shell-pad-x: 18px;
+    --card-pad-x: 16px;
+  }
+}
+
+/*
+ * One visible focus ring for the whole app. Keyboard operability is only real
+ * if you can see where you are, and `:focus-visible` keeps it off mouse
+ * clicks — which is exactly the thing inline styles could not express.
+ */
+:where(a, button, input, textarea, select, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--focus-ring-color);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}

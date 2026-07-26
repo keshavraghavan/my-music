@@ -1,0 +1,87 @@
+.back {
+  font: 700 11px var(--font-mono);
+  color: var(--muted);
+  display: inline-block;
+  margin-bottom: 14px;
+}
+
+.frame {
+  border: 1px solid var(--rule);
+  background: var(--paper);
+}
+
+.chrome {
+  height: 28px;
+  border-bottom: 1px solid var(--rule);
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  font: 500 10.5px var(--font-mono);
+  color: var(--muted);
+}
+
+.body {
+  padding: 26px 30px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--rule-soft);
+}
+
+.identity {
+  flex: 1;
+  min-width: 180px;
+}
+
+.name {
+  font: 700 18px var(--font-display);
+  margin: 0;
+}
+
+.meta {
+  font: 500 11px var(--font-mono);
+  color: var(--muted);
+}
+
+.service {
+  border: 1px solid var(--rule-soft);
+  padding: 1px 5px;
+}
+
+.wallLabel {
+  font: 700 12px var(--font-mono);
+  color: var(--muted);
+  letter-spacing: 0.06em;
+  margin: 16px 0 8px;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.locked {
+  padding: 60px 40px;
+  text-align: center;
+}
+
+.lockedName {
+  font: 700 20px var(--font-display);
+  margin: 0;
+}
+
+@media (max-width: 720px) {
+  .body {
+    padding: 20px 16px;
+  }
+
+  .locked {
+    padding: 40px 20px;
+  }
+}
