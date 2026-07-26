@@ -1,7 +1,22 @@
 'use client';
 
 import React from 'react';
-import sx from './sx.js';
+import sx from '@/sx';
+import type {
+  AppNotification,
+  AppState,
+  ComposeTarget,
+  ModuleKey,
+  NotifPrefKey,
+  Person,
+  PersonId,
+  ProfileForm,
+  Relation,
+  Route,
+  ServiceKey,
+  Spacing,
+  Track,
+} from '@/types';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Static data. Ported verbatim from the design source (Retro Music Social).
@@ -9,7 +24,24 @@ import sx from './sx.js';
 
 const ACCENTS = ['#B7472A', '#3F6B4F', '#C9A227', '#2F5673'];
 
-const PEOPLE = {
+/** Accent for row `i`, cycling the palette. Wraps, so it always resolves. */
+function accent(i: number): string {
+  return ACCENTS[i % ACCENTS.length] as string;
+}
+
+const MODULE_KEYS: ModuleKey[] = [
+  'feed',
+  'nowPlaying',
+  'chart',
+  'recs',
+  'monthly',
+  'receipt',
+  'friendsList',
+];
+
+const SPACING_KEYS: Spacing[] = ['compact', 'comfortable', 'spacious'];
+
+const PEOPLE: Record<PersonId, Person> = {
   theok: { id: 'theok', name: 'Theo K.', handle: 'theok_fm', initials: 'TK', color: '#3F6B4F', service: 'Apple Music', city: 'Bushwick, Brooklyn', private: false },
   samo: { id: 'samo', name: 'Sam O.', handle: 'sam_radio', initials: 'SO', color: '#2F5673', service: 'Spotify', city: 'Astoria, Queens', private: true },
   marisolv: { id: 'marisolv', name: 'Marisol V.', handle: 'marisolv', initials: 'MV', color: '#B7472A', service: 'Spotify', city: 'Sunset Park, Brooklyn', private: false },
@@ -19,9 +51,16 @@ const PEOPLE = {
   irisn: { id: 'irisn', name: 'Iris N.', handle: 'irisn', initials: 'IN', color: '#C9A227', service: 'Spotify', city: 'Greenpoint, Brooklyn', private: false },
   cassr: { id: 'cassr', name: 'Cass R.', handle: 'cassr', initials: 'CR', color: '#B7472A', service: 'Apple Music', city: 'Woodside, Queens', private: false },
 };
-const DIRECTORY_HANDLES = Object.values(PEOPLE).map((p) => p.handle).concat(['junotapes']);
+const DIRECTORY_HANDLES: string[] = Object.values(PEOPLE)
+  .map((p) => p.handle)
+  .concat(['junotapes']);
 
-const TRACK_POOL = [
+/** True when `id` names someone in the directory — narrows a confirm payload. */
+function isPersonId(id: string): id is PersonId {
+  return Object.prototype.hasOwnProperty.call(PEOPLE, id);
+}
+
+const TRACK_POOL: Track[] = [
   { title: 'Terracotta', artist: 'Coral June' },
   { title: 'Amber Line', artist: 'Marigold Static' },
   { title: 'Honeycomb', artist: 'Peach Radio' },
@@ -33,13 +72,38 @@ const TRACK_POOL = [
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Display-value bags with per-key property names.
+//
+// renderVals() builds these with computed keys, but the JSX reads them as
+// static properties — `v.dragStart_feed`, `v.spacingBg_compact`. Template
+// literal mapped types describe exactly that set, so the reads stay checked
+// instead of falling back to a permissive index signature.
+// ─────────────────────────────────────────────────────────────────────────────
+
+type NavKey = 'home' | 'friends' | 'playlist' | 'notifications' | 'settings';
+
+/** Every text field in the app is an <input>, so one alias covers them all. */
+type TextChange = React.ChangeEvent<HTMLInputElement>;
+
+type DragHandlers = { [K in ModuleKey as `dragStart_${K}`]: () => void } & {
+  [K in ModuleKey as `drop_${K}`]: (e: React.DragEvent) => void;
+};
+
+type ExpandLabels = { [K in ModuleKey as `expandLabel_${K}`]: string };
+type ExpandToggles = { [K in ModuleKey as `toggleExpand_${K}`]: () => void };
+
+type SpacingProps = { [K in Spacing as `setSpacing_${K}`]: () => void } & {
+  [K in Spacing as `spacingBg_${K}`]: string;
+} & { [K in Spacing as `spacingColor_${K}`]: string };
+
+// ─────────────────────────────────────────────────────────────────────────────
 // App — the single-page application. All screens, state and interactions live
 // here (mirrors the design's `Component extends DCLogic`). React.Component gives
 // us the same state/setState/render lifecycle the design logic assumed.
 // ─────────────────────────────────────────────────────────────────────────────
 
-export default class App extends React.Component {
-  state = {
+export default class App extends React.Component<Record<string, never>, AppState> {
+  override state: AppState = {
     route: 'landing',
     onboardStep: 0,
     ob: { name: 'Juno Reyes', handle: 'junotapes2', bio: '' },
@@ -101,18 +165,18 @@ export default class App extends React.Component {
     notifPrefs: { recs: true, friendActivity: true, chart: false },
   };
 
-  goTo(route) { this.setState({ route, editMode: false }); }
-  showToast(msg) {
+  goTo(route: Route) { this.setState({ route, editMode: false }); }
+  showToast(msg: string) {
     this.setState({ toast: msg });
     setTimeout(() => this.setState((s) => (s.toast === msg ? { toast: null } : null)), 2600);
   }
 
-  toggle(key) { this.setState((s) => ({ modules: { ...s.modules, [key]: !s.modules[key] } })); }
+  toggle(key: ModuleKey) { this.setState((s) => ({ modules: { ...s.modules, [key]: !s.modules[key] } })); }
   toggleEditMode() { this.setState((s) => ({ editMode: !s.editMode })); }
-  toggleExpand(key) { this.setState((s) => ({ expanded: { ...s.expanded, [key]: !s.expanded[key] } })); }
-  removeMonthlyTrack(id) { this.setState((s) => ({ monthlyTracks: s.monthlyTracks.filter((t) => t.id !== id) })); }
-  setSpacing(key) { this.setState({ spacing: key }); }
-  dropOn(targetKey) {
+  toggleExpand(key: ModuleKey) { this.setState((s) => ({ expanded: { ...s.expanded, [key]: !s.expanded[key] } })); }
+  removeMonthlyTrack(id: string) { this.setState((s) => ({ monthlyTracks: s.monthlyTracks.filter((t) => t.id !== id) })); }
+  setSpacing(key: Spacing) { this.setState({ spacing: key }); }
+  dropOn(targetKey: ModuleKey) {
     this.setState((s) => {
       const dragKey = s.dragKey;
       if (!dragKey || dragKey === targetKey) return null;
@@ -123,7 +187,7 @@ export default class App extends React.Component {
   }
 
   // onboarding
-  setObField(field, val) { this.setState((s) => ({ ob: { ...s.ob, [field]: val } })); }
+  setObField(field: keyof ProfileForm, val: string) { this.setState((s) => ({ ob: { ...s.ob, [field]: val } })); }
   obNext() {
     const s = this.state;
     if (s.onboardStep === 2 && DIRECTORY_HANDLES.includes(s.ob.handle)) return;
@@ -136,37 +200,41 @@ export default class App extends React.Component {
   }
 
   // friends
-  viewFriend(id) {
+  setRelation(id: PersonId, rel: Relation) {
+    this.setState((s) => ({ relations: { ...s.relations, [id]: rel } }));
+  }
+  viewFriend(id: PersonId) {
     const p = PEOPLE[id];
     const rel = this.state.relations[id];
     this.setState({ viewingFriendId: id, route: p.private && rel !== 'friend' ? 'friend-locked' : 'friend' });
   }
   requestFollow() {
     const id = this.state.viewingFriendId;
-    this.setState((s) => ({ relations: { ...s.relations, [id]: 'requested' } }));
+    if (!id) return;
+    this.setRelation(id, 'requested');
   }
-  addFriend(id) {
-    this.setState((s) => ({ relations: { ...s.relations, [id]: 'friend' } }));
+  addFriend(id: PersonId) {
+    this.setRelation(id, 'friend');
     this.showToast(`You're now friends with ${PEOPLE[id].name}.`);
   }
-  toggleFriendMenu(id) { this.setState((s) => ({ openFriendMenu: s.openFriendMenu === id ? null : id })); }
-  askRemoveFriend(id) {
+  toggleFriendMenu(id: PersonId) { this.setState((s) => ({ openFriendMenu: s.openFriendMenu === id ? null : id })); }
+  askRemoveFriend(id: PersonId) {
     this.setState({ openFriendMenu: null, confirm: { open: true, kind: 'remove', title: 'Remove friend?', message: `${PEOPLE[id].name} will no longer see your page updates, and you won't see theirs.`, confirmLabel: 'REMOVE', payload: id } });
   }
-  askBlockFriend(id) {
+  askBlockFriend(id: PersonId) {
     this.setState({ openFriendMenu: null, confirm: { open: true, kind: 'block', title: 'Block this person?', message: `${PEOPLE[id].name} won't be able to view your page or send you recommendations.`, confirmLabel: 'BLOCK', payload: id } });
   }
 
   // recs
-  toggleRecMenu(id) { this.setState((s) => ({ openRecMenu: s.openRecMenu === id ? null : id })); }
-  hideRec(id) { this.setState((s) => ({ recs: s.recs.map((r) => (r.id === id ? { ...r, status: 'hidden' } : r)), openRecMenu: null })); }
-  askReportRec(id) {
+  toggleRecMenu(id: string) { this.setState((s) => ({ openRecMenu: s.openRecMenu === id ? null : id })); }
+  hideRec(id: string) { this.setState((s) => ({ recs: s.recs.map((r) => (r.id === id ? { ...r, status: 'hidden' as const } : r)), openRecMenu: null })); }
+  askReportRec(id: string) {
     this.setState({ confirm: { open: true, kind: 'report-rec', title: 'Report this recommendation?', message: "We'll take a look and remove it from your page if it violates guidelines.", confirmLabel: 'REPORT', payload: id }, openRecMenu: null });
   }
 
   // notifications
   markAllRead() { this.setState((s) => ({ notifications: s.notifications.map((n) => ({ ...n, read: true })) })); }
-  clickNotification(n) {
+  clickNotification(n: AppNotification) {
     this.setState((s) => ({ notifications: s.notifications.map((x) => (x.id === n.id ? { ...x, read: true } : x)) }));
     if (n.type === 'rec' || n.type === 'chart') this.goTo('home');
     else if (n.type === 'playlist') this.goTo('playlist');
@@ -185,10 +253,10 @@ export default class App extends React.Component {
     this.setState({ compose: { open: true, mode: 'monthlyPick', targetFriendId: null, target: 'wall', query: '', selectedIdx: null, note: '', addAnyway: false } });
   }
   closeCompose() { this.setState((s) => ({ compose: { ...s.compose, open: false } })); }
-  setComposeQuery(v) { this.setState((s) => ({ compose: { ...s.compose, query: v, selectedIdx: null, addAnyway: false } })); }
-  selectTrack(idx) { this.setState((s) => ({ compose: { ...s.compose, selectedIdx: idx, addAnyway: false } })); }
-  setComposeNote(v) { this.setState((s) => ({ compose: { ...s.compose, note: v } })); }
-  setComposeTarget(t) { this.setState((s) => ({ compose: { ...s.compose, target: t, addAnyway: false } })); }
+  setComposeQuery(v: string) { this.setState((s) => ({ compose: { ...s.compose, query: v, selectedIdx: null, addAnyway: false } })); }
+  selectTrack(idx: number) { this.setState((s) => ({ compose: { ...s.compose, selectedIdx: idx, addAnyway: false } })); }
+  setComposeNote(v: string) { this.setState((s) => ({ compose: { ...s.compose, note: v } })); }
+  setComposeTarget(t: ComposeTarget) { this.setState((s) => ({ compose: { ...s.compose, target: t, addAnyway: false } })); }
   toggleAddAnyway() { this.setState((s) => ({ compose: { ...s.compose, addAnyway: !s.compose.addAnyway } })); }
 
   postRecommendation() {
@@ -217,23 +285,24 @@ export default class App extends React.Component {
       this.showToast(`Added ${track.title} to Rooftop Party 2026.`);
     } else {
       this.setState((prev) => ({ theoWall: [{ id: 'w' + Date.now(), personId: 'me', text: s.compose.note || '', track: track.title, artist: track.artist, time: 'JUST NOW' }, ...prev.theoWall], compose: { ...prev.compose, open: false } }));
-      this.showToast(`Posted to ${PEOPLE[s.compose.targetFriendId].name}'s wall.`);
+      const recipient = s.compose.targetFriendId ? PEOPLE[s.compose.targetFriendId].name : 'their';
+      this.showToast(`Posted to ${recipient}'s wall.`);
     }
   }
 
-  filteredTracks(query) {
+  filteredTracks(query: string): Track[] {
     if (!query) return TRACK_POOL;
     const q = query.toLowerCase();
     return TRACK_POOL.filter((t) => t.title.toLowerCase().includes(q) || t.artist.toLowerCase().includes(q));
   }
 
   // services / settings
-  askDisconnect(service) {
-    this.setState({ confirm: { open: true, kind: 'disconnect-' + service, title: `Disconnect ${service === 'spotify' ? 'Spotify' : 'Apple Music'}?`, message: 'Now Playing and charts pause for this service until you reconnect.', confirmLabel: 'DISCONNECT', payload: service } });
+  askDisconnect(service: ServiceKey) {
+    this.setState({ confirm: { open: true, kind: service === 'spotify' ? 'disconnect-spotify' : 'disconnect-apple', title: `Disconnect ${service === 'spotify' ? 'Spotify' : 'Apple Music'}?`, message: 'Now Playing and charts pause for this service until you reconnect.', confirmLabel: 'DISCONNECT', payload: service } });
   }
-  connectService(service) { this.setState((s) => ({ connected: { ...s.connected, [service]: true } })); }
+  connectService(service: ServiceKey) { this.setState((s) => ({ connected: { ...s.connected, [service]: true } })); }
   togglePrivate() { this.setState((s) => ({ isPrivateProfile: !s.isPrivateProfile })); }
-  setAccountField(field, val) { this.setState((s) => ({ accountForm: { ...s.accountForm, [field]: val } })); }
+  setAccountField(field: keyof ProfileForm, val: string) { this.setState((s) => ({ accountForm: { ...s.accountForm, [field]: val } })); }
   saveAccount() {
     const s = this.state;
     if (DIRECTORY_HANDLES.includes(s.accountForm.handle) && s.accountForm.handle !== 'junotapes') return;
@@ -242,22 +311,24 @@ export default class App extends React.Component {
   askDeleteAccount() {
     this.setState({ confirm: { open: true, kind: 'delete-account', title: 'Delete your account?', message: 'This permanently removes your page, charts, and recommendations for everyone. This cannot be undone.', confirmLabel: 'DELETE', payload: null } });
   }
-  toggleNotifPref(key) { this.setState((s) => ({ notifPrefs: { ...s.notifPrefs, [key]: !s.notifPrefs[key] } })); }
+  toggleNotifPref(key: NotifPrefKey) { this.setState((s) => ({ notifPrefs: { ...s.notifPrefs, [key]: !s.notifPrefs[key] } })); }
 
   closeConfirm() { this.setState({ confirm: { open: false, kind: '', title: '', message: '', confirmLabel: '', payload: null } }); }
   confirmAction() {
     const c = this.state.confirm;
     switch (c.kind) {
       case 'remove':
-        this.setState((s) => ({ relations: { ...s.relations, [c.payload]: 'none' } }));
+        if (!c.payload || !isPersonId(c.payload)) break;
+        this.setRelation(c.payload, 'none');
         this.showToast(`Removed ${PEOPLE[c.payload].name} as a friend.`);
         break;
       case 'block':
-        this.setState((s) => ({ relations: { ...s.relations, [c.payload]: 'blocked' } }));
+        if (!c.payload || !isPersonId(c.payload)) break;
+        this.setRelation(c.payload, 'blocked');
         this.showToast(`Blocked ${PEOPLE[c.payload].name}.`);
         break;
       case 'report-rec':
-        this.setState((s) => ({ recs: s.recs.map((r) => (r.id === c.payload ? { ...r, status: 'reported' } : r)) }));
+        this.setState((s) => ({ recs: s.recs.map((r) => (r.id === c.payload ? { ...r, status: 'reported' as const } : r)) }));
         this.showToast("Reported. We'll take a look.");
         break;
       case 'disconnect-spotify':
@@ -277,13 +348,17 @@ export default class App extends React.Component {
     this.closeConfirm();
   }
 
+  // Return type is inferred deliberately: it is ~150 derived display values, and
+  // the dynamic-key bags below carry precise template-literal types, so
+  // inference gives render() better checking than a hand-written interface.
   renderVals() {
     const s = this.state;
     const route = s.route;
     const showShell = !['landing', 'onboard'].includes(route);
 
-    const navKeys = ['home', 'friends', 'playlist', 'notifications', 'settings'];
-    const navBg = {}, navColor = {};
+    const navKeys: NavKey[] = ['home', 'friends', 'playlist', 'notifications', 'settings'];
+    const navBg = {} as Record<NavKey, string>;
+    const navColor = {} as Record<NavKey, string>;
     navKeys.forEach((k) => {
       const active = route === k || (k === 'friends' && (route === 'friend' || route === 'friend-locked'));
       navBg[k] = active ? '#1E1B18' : 'transparent';
@@ -291,7 +366,7 @@ export default class App extends React.Component {
     });
 
     const m = s.modules;
-    const defs = [
+    const defs: { key: ModuleKey; label: string }[] = [
       { key: 'feed', label: 'Line Updates (Feed)' },
       { key: 'nowPlaying', label: 'Now Playing' },
       { key: 'chart', label: 'Top 50/100 Chart' },
@@ -301,7 +376,7 @@ export default class App extends React.Component {
       { key: 'friendsList', label: 'Friends List' },
     ];
     const moduleList = defs.map((d, i) => ({
-      ...d, color: ACCENTS[i % 4], enabled: m[d.key],
+      ...d, color: accent(i), enabled: m[d.key],
       trackColor: m[d.key] ? '#1E1B18' : '#F2ECDF', knobColor: m[d.key] ? '#F2ECDF' : '#1E1B18',
       knobLeft: m[d.key] ? '21px' : '1px', knobLeftSm: m[d.key] ? '19px' : '1px',
       toggle: () => this.toggle(d.key),
@@ -312,36 +387,44 @@ export default class App extends React.Component {
       { title: 'Rooftop Static', artist: 'The Nightbus' }, { title: 'Terracotta', artist: 'Coral June' },
       { title: 'Last Train Home', artist: 'Wilder Sun' }, { title: 'Honeycomb', artist: 'Peach Radio' },
       { title: 'Bodega Light', artist: 'Slow Salt' }, { title: 'Copper & Rust', artist: 'Meridian Low' },
-    ].map((t, i) => ({ ...t, rank: i + 1, bulletColor: ACCENTS[i % 4] }));
+    ].map((t, i) => ({ ...t, rank: i + 1, bulletColor: accent(i) }));
     const topAlbums = [
       { title: 'Ridgewood Nights', artist: 'Marigold Static' }, { title: 'Low Tide Radio', artist: 'Hollow Coast' },
       { title: 'Elevated', artist: 'The Nightbus' }, { title: 'Sundial', artist: 'Coral June' },
       { title: 'Departures', artist: 'Wilder Sun' }, { title: 'Honeycomb EP', artist: 'Peach Radio' },
-    ].map((t, i) => ({ ...t, rank: i + 1, bulletColor: ACCENTS[i % 4] }));
+    ].map((t, i) => ({ ...t, rank: i + 1, bulletColor: accent(i) }));
     const receiptTracks = topSongs.slice(0, 5).map((t, i) => ({ stop: `0${i + 1}`, title: t.title, artist: t.artist, mins: `${14 - i * 2}m` }));
     const monthlyDisplay = s.monthlyTracks.map((t, i) => ({ ...t, rank: i + 1, remove: () => this.removeMonthlyTrack(t.id) }));
     const chartItems = s.chartTab === 'songs' ? topSongs : topAlbums;
 
-    const keys = ['feed', 'nowPlaying', 'chart', 'recs', 'monthly', 'receipt', 'friendsList'];
-    const order = {}; keys.forEach((k) => { order[k] = s.order.indexOf(k); });
-    const drag = {};
-    keys.forEach((k) => {
-      drag[`dragStart_${k}`] = () => this.setState({ dragKey: k });
-      drag[`drop_${k}`] = (e) => { e.preventDefault(); this.dropOn(k); };
-    });
-    const span = {}; const expandLabel = {}; const toggleExpand = {};
-    keys.forEach((k) => {
+    // These bags are built with computed keys but read in JSX as static
+    // properties (`v.dragStart_feed`). Typing them as template-literal mapped
+    // types keeps that read checked — a typo'd module key is a compile error —
+    // while the write side asserts once, where the key is only known at runtime.
+    const order = {} as Record<ModuleKey, number>;
+    const drag = {} as DragHandlers;
+    const span = {} as Record<ModuleKey, string>;
+    const expandLabel = {} as ExpandLabels;
+    const toggleExpand = {} as ExpandToggles;
+    const dragBag = drag as Record<string, (e: React.DragEvent) => void>;
+    const expandLabelBag = expandLabel as Record<string, string>;
+    const toggleExpandBag = toggleExpand as Record<string, () => void>;
+    MODULE_KEYS.forEach((k) => {
+      order[k] = s.order.indexOf(k);
+      dragBag[`dragStart_${k}`] = () => this.setState({ dragKey: k });
+      dragBag[`drop_${k}`] = (e) => { e.preventDefault(); this.dropOn(k); };
       span[k] = s.expanded[k] ? 'span 2' : 'span 1';
-      expandLabel[`expandLabel_${k}`] = s.expanded[k] ? '⤡ COLLAPSE' : '⤢ EXPAND';
-      toggleExpand[`toggleExpand_${k}`] = () => this.toggleExpand(k);
+      expandLabelBag[`expandLabel_${k}`] = s.expanded[k] ? '⤡ COLLAPSE' : '⤢ EXPAND';
+      toggleExpandBag[`toggleExpand_${k}`] = () => this.toggleExpand(k);
     });
-    const spacingMap = { compact: 16, comfortable: 28, spacious: 44 };
-    const spacingProps = {};
-    ['compact', 'comfortable', 'spacious'].forEach((k) => {
+    const spacingMap: Record<Spacing, number> = { compact: 16, comfortable: 28, spacious: 44 };
+    const spacingProps = {} as SpacingProps;
+    const spacingBag = spacingProps as Record<string, string | (() => void)>;
+    SPACING_KEYS.forEach((k) => {
       const active = s.spacing === k;
-      spacingProps[`setSpacing_${k}`] = () => this.setSpacing(k);
-      spacingProps[`spacingBg_${k}`] = active ? '#1E1B18' : 'transparent';
-      spacingProps[`spacingColor_${k}`] = active ? '#F2ECDF' : '#6b6156';
+      spacingBag[`setSpacing_${k}`] = () => this.setSpacing(k);
+      spacingBag[`spacingBg_${k}`] = active ? '#1E1B18' : 'transparent';
+      spacingBag[`spacingColor_${k}`] = active ? '#F2ECDF' : '#6b6156';
     });
 
     const noServiceConnected = !s.connected.spotify && !s.connected.apple;
@@ -353,7 +436,7 @@ export default class App extends React.Component {
       hide: () => this.hideRec(r.id), report: () => this.askReportRec(r.id),
     }));
 
-    const friendIds = Object.keys(s.relations).filter((id) => s.relations[id] === 'friend');
+    const friendIds = (Object.keys(s.relations) as PersonId[]).filter((id) => s.relations[id] === 'friend');
     const friendsListDisplay = friendIds.map((id) => ({ ...PEOPLE[id], view: () => this.viewFriend(id) }));
 
     const q = s.friendSearch.trim().toLowerCase();
@@ -381,7 +464,7 @@ export default class App extends React.Component {
       color: w.personId === 'me' ? '#B7472A' : PEOPLE[w.personId].color, initials: w.personId === 'me' ? 'JR' : PEOPLE[w.personId].initials,
       border: w.time === 'JUST NOW' ? '#3F6B4F' : 'rgba(30,27,24,0.3)', bg: w.time === 'JUST NOW' ? 'rgba(63,107,79,0.06)' : 'transparent',
     })) : [];
-    const requestRel = s.relations[s.viewingFriendId] || 'none';
+    const requestRel: Relation = s.viewingFriendId ? s.relations[s.viewingFriendId] : 'none';
 
     const notificationsDisplay = s.notifications.map((n) => ({
       ...n, weight: n.read ? '400' : '700', bg: n.read ? 'transparent' : 'rgba(183,71,42,0.05)', dotColor: n.read ? 'transparent' : '#B7472A',
@@ -413,8 +496,8 @@ export default class App extends React.Component {
 
       obStepNum: s.onboardStep + 1,
       obStep0: s.onboardStep === 0, obStep1: s.onboardStep === 1, obStep2: s.onboardStep === 2, obStep3: s.onboardStep === 3, obStep4: s.onboardStep === 4,
-      ob: s.ob, setObName: (e) => this.setObField('name', e.target.value), setObBio: (e) => this.setObField('bio', e.target.value),
-      setObHandle: (e) => this.setObField('handle', e.target.value),
+      ob: s.ob, setObName: (e: TextChange) => this.setObField('name', e.target.value), setObBio: (e: TextChange) => this.setObField('bio', e.target.value),
+      setObHandle: (e: TextChange) => this.setObField('handle', e.target.value),
       obConnectSpotify: () => this.connectService('spotify'), obConnectApple: () => this.connectService('apple'),
       obSpotifyLabel: s.connected.spotify ? 'CONNECTED ✓' : 'CONNECT', obSpotifyBg: s.connected.spotify ? '#3F6B4F' : 'transparent', obSpotifyColor: s.connected.spotify ? '#F2ECDF' : '#1E1B18',
       obAppleLabel: s.connected.apple ? 'CONNECTED ✓' : 'CONNECT', obAppleBg: s.connected.apple ? '#B7472A' : 'transparent', obAppleColor: s.connected.apple ? '#F2ECDF' : '#1E1B18',
@@ -427,7 +510,7 @@ export default class App extends React.Component {
       modules: m, moduleList, order, span, ...expandLabel, ...toggleExpand, ...drag, ...spacingProps, gapPx: spacingMap[s.spacing],
       editMode: s.editMode, toggleEditMode: () => this.toggleEditMode(),
       editButtonLabel: s.editMode ? 'DONE EDITING' : 'EDIT PAGE', editButtonBg: s.editMode ? '#1E1B18' : 'transparent', editButtonColor: s.editMode ? '#F2ECDF' : '#1E1B18',
-      cardCursor: s.editMode ? 'grab' : 'default', onDragOver: (e) => e.preventDefault(), onDragEnd: () => this.setState({ dragKey: null }),
+      cardCursor: s.editMode ? 'grab' : 'default', onDragOver: (e: React.DragEvent) => e.preventDefault(), onDragEnd: () => this.setState({ dragKey: null }),
       chartItems, receiptTracks, monthlyDisplay, hasMonthlyTracks: s.monthlyTracks.length > 0,
       openComposeForMonthly: () => this.openComposeForMonthly(),
       monthlyAddLabel: s.monthlyTracks.length >= 10 ? 'TOP 10 FULL' : '+ ADD A TRACK',
@@ -448,7 +531,7 @@ export default class App extends React.Component {
       friendCount: friendIds.length, hasFriends: friendIds.length > 0, friendsListDisplay,
       hasActiveRecs: friendRecs.length > 0, friendRecs,
 
-      friendSearch: s.friendSearch, setFriendSearch: (e) => this.setState({ friendSearch: e.target.value }),
+      friendSearch: s.friendSearch, setFriendSearch: (e: TextChange) => this.setState({ friendSearch: e.target.value }),
       searchIsEmpty: q === '', searchHasResults: directoryResults.length > 0, directoryResults, friendsManage,
 
       friend: {
@@ -466,8 +549,8 @@ export default class App extends React.Component {
       setSettingsTab_privacy: () => this.setState({ settingsTab: 'privacy' }), setSettingsTab_notifs: () => this.setState({ settingsTab: 'notifs' }),
       settingsIsAccount: s.settingsTab === 'account', settingsIsServices: s.settingsTab === 'services', settingsIsPrivacy: s.settingsTab === 'privacy', settingsIsNotifs: s.settingsTab === 'notifs',
 
-      accountForm: s.accountForm, setAccountName: (e) => this.setAccountField('name', e.target.value), setAccountBio: (e) => this.setAccountField('bio', e.target.value),
-      setAccountHandle: (e) => this.setAccountField('handle', e.target.value),
+      accountForm: s.accountForm, setAccountName: (e: TextChange) => this.setAccountField('name', e.target.value), setAccountBio: (e: TextChange) => this.setAccountField('bio', e.target.value),
+      setAccountHandle: (e: TextChange) => this.setAccountField('handle', e.target.value),
       accountHandleTaken: DIRECTORY_HANDLES.includes(s.accountForm.handle) && s.accountForm.handle !== 'junotapes',
       accountHandleBorder: (DIRECTORY_HANDLES.includes(s.accountForm.handle) && s.accountForm.handle !== 'junotapes') ? '#B7472A' : 'rgba(30,27,24,0.3)',
       saveAccount: () => this.saveAccount(), askDeleteAccount: () => this.askDeleteAccount(),
@@ -480,17 +563,17 @@ export default class App extends React.Component {
 
       togglePrivate: () => this.togglePrivate(), privateTrackColor: s.isPrivateProfile ? '#1E1B18' : '#F2ECDF', privateKnobColor: s.isPrivateProfile ? '#F2ECDF' : '#1E1B18', privateKnobLeft: s.isPrivateProfile ? '21px' : '1px',
 
-      notifPrefsList: [
+      notifPrefsList: ([
         { key: 'recs', label: 'New recommendations' }, { key: 'friendActivity', label: 'Friend activity' }, { key: 'chart', label: 'Chart updates' },
-      ].map((np) => ({ ...np, trackColor: s.notifPrefs[np.key] ? '#1E1B18' : '#F2ECDF', knobColor: s.notifPrefs[np.key] ? '#F2ECDF' : '#1E1B18', knobLeft: s.notifPrefs[np.key] ? '19px' : '1px', toggle: () => this.toggleNotifPref(np.key) })),
+      ] as { key: NotifPrefKey; label: string }[]).map((np) => ({ ...np, trackColor: s.notifPrefs[np.key] ? '#1E1B18' : '#F2ECDF', knobColor: s.notifPrefs[np.key] ? '#F2ECDF' : '#1E1B18', knobLeft: s.notifPrefs[np.key] ? '19px' : '1px', toggle: () => this.toggleNotifPref(np.key) })),
 
       playlistContributorCount: new Set(s.playlistTracks.flatMap((t) => t.addedBy)).size,
       playlistTracksDisplay, openComposeForPlaylist: () => this.openComposeForPlaylist(),
 
       compose: { ...s.compose, isRecommend: s.compose.mode === 'recommend', showDuplicateWarning },
       composeTitle: s.compose.mode === 'recommend' ? `New Recommendation → ${viewingFriend.name}` : (s.compose.mode === 'monthlyPick' ? 'Add to Your Top 10' : 'Add Track → Rooftop Party 2026'),
-      closeCompose: () => this.closeCompose(), setComposeQuery: (e) => this.setComposeQuery(e.target.value), composeResults,
-      setComposeNote: (e) => this.setComposeNote(e.target.value),
+      closeCompose: () => this.closeCompose(), setComposeQuery: (e: TextChange) => this.setComposeQuery(e.target.value), composeResults,
+      setComposeNote: (e: TextChange) => this.setComposeNote(e.target.value),
       setComposeTargetWall: () => this.setComposeTarget('wall'), setComposeTargetPlaylist: () => this.setComposeTarget('playlist'),
       targetWallBorder: s.compose.target === 'wall' ? '#1E1B18' : 'rgba(30,27,24,0.35)', targetWallDot: s.compose.target === 'wall' ? '#1E1B18' : 'transparent', targetWallShadow: s.compose.target === 'wall' ? 'inset 0 0 0 3px #F2ECDF' : 'none',
       targetPlaylistBorder: s.compose.target === 'playlist' ? '#1E1B18' : 'rgba(30,27,24,0.35)', targetPlaylistDot: s.compose.target === 'playlist' ? '#1E1B18' : 'transparent', targetPlaylistShadow: s.compose.target === 'playlist' ? 'inset 0 0 0 3px #F2ECDF' : 'none',
@@ -505,7 +588,7 @@ export default class App extends React.Component {
     };
   }
 
-  render() {
+  override render() {
     const v = this.renderVals();
     return (
       <div style={sx('background:#F2ECDF;min-height:100vh;color:#1E1B18;position:relative')}>
@@ -532,7 +615,7 @@ export default class App extends React.Component {
           <div style={sx('min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:repeating-linear-gradient(135deg,#B7472A 0 3px,#F2ECDF 3px 3px,#F2ECDF 3px 60px,#3F6B4F 60px 63px,#F2ECDF 63px 120px)')}>
             <div style={sx('background:#F2ECDF;padding:44px 60px;border:1px solid rgba(30,27,24,0.35)')}>
               <div style={sx("font:700 60px/1 'Tinos';text-align:center")}>MyMusic.</div>
-              <div style={sx("font:400 13px 'Arimo';color:#6b6156;text-align:center;margin-top:12px;letter-spacing:0.04em")}>YOUR PAGE ｜ YOUR CHARTS ｜ YOUR FRIENDS' PICKS</div>
+              <div style={sx("font:400 13px 'Arimo';color:#6b6156;text-align:center;margin-top:12px;letter-spacing:0.04em")}>YOUR PAGE ｜ YOUR CHARTS ｜ YOUR FRIENDS&apos; PICKS</div>
               <div onClick={v.startOnboarding} style={sx("margin-top:22px;background:#1E1B18;color:#F2ECDF;font:700 12px 'JetBrains Mono';text-align:center;padding:14px;letter-spacing:0.08em;cursor:pointer")}>GET STARTED →</div>
             </div>
           </div>
@@ -550,7 +633,7 @@ export default class App extends React.Component {
                 {v.obStep0 && (
                   <div style={sx('text-align:center')}>
                     <div style={sx("font:700 34px 'Tinos';margin-bottom:8px")}>Welcome aboard</div>
-                    <div style={sx("font:400 13px/1.6 'Arimo';color:#6b6156;margin-bottom:18px")}>Five stops: welcome, connect your service, build your page, choose your modules, and you're running.</div>
+                    <div style={sx("font:400 13px/1.6 'Arimo';color:#6b6156;margin-bottom:18px")}>Five stops: welcome, connect your service, build your page, choose your modules, and you&apos;re running.</div>
                   </div>
                 )}
 
@@ -590,7 +673,7 @@ export default class App extends React.Component {
 
                 {v.obStep3 && (
                   <>
-                    <div style={sx("font:700 22px 'Tinos';margin-bottom:2px")}>What's on your page?</div>
+                    <div style={sx("font:700 22px 'Tinos';margin-bottom:2px")}>What&apos;s on your page?</div>
                     <div style={sx("font:400 12px 'Arimo';color:#6b6156;margin-bottom:10px")}>Toggle anytime from settings.</div>
                     {v.moduleList.map((m) => (
                       <div key={m.key} style={sx('display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px dotted rgba(30,27,24,0.3)')}>
@@ -684,7 +767,7 @@ export default class App extends React.Component {
                       <>
                         <span style={sx("font:700 15px 'Tinos'")}>Now Playing</span>
                         <div style={sx('padding:30px 0;text-align:center')}>
-                          <div style={sx("font:400 13px/1.6 'Arimo';color:#6b6156;margin-bottom:10px")}>Connect Spotify or Apple Music to show what you're listening to.</div>
+                          <div style={sx("font:400 13px/1.6 'Arimo';color:#6b6156;margin-bottom:10px")}>Connect Spotify or Apple Music to show what you&apos;re listening to.</div>
                           <span onClick={v.goSettingsServices} style={sx("font:700 11px 'JetBrains Mono';color:#3F6B4F;text-decoration:underline;cursor:pointer")}>CONNECT A SERVICE →</span>
                         </div>
                       </>
@@ -699,7 +782,7 @@ export default class App extends React.Component {
                           </div>
                         </div>
                         {v.bothConnected && (
-                          <div style={sx("border:1px solid #C9A227;background:rgba(201,162,39,0.1);padding:8px 12px;margin:10px 0;font:600 11px 'Arimo'")}>Spotify and Apple Music disagree on what's playing — showing:
+                          <div style={sx("border:1px solid #C9A227;background:rgba(201,162,39,0.1);padding:8px 12px;margin:10px 0;font:600 11px 'Arimo'")}>Spotify and Apple Music disagree on what&apos;s playing — showing:
                             <span onClick={v.setSourceSpotify} style={sx("text-decoration:underline;cursor:pointer;margin-left:4px;font:700 11px 'JetBrains Mono'")}>SPOTIFY</span> /
                             <span onClick={v.setSourceApple} style={sx("text-decoration:underline;cursor:pointer;font:700 11px 'JetBrains Mono'")}>APPLE</span>
                           </div>
@@ -817,7 +900,7 @@ export default class App extends React.Component {
                     <div style={sx("padding:8px 100px 0 20px;font:400 11px/1.5 'Arimo';color:#6b6156")}>Chosen by you — not pulled from Spotify or Apple Music.</div>
                     {!v.hasMonthlyTracks && (
                       <div style={sx('padding:22px 20px;text-align:center')}>
-                        <div style={sx("font:400 13px/1.6 'Arimo';color:#6b6156;margin-bottom:8px")}>You haven't picked your Top 10 yet.</div>
+                        <div style={sx("font:400 13px/1.6 'Arimo';color:#6b6156;margin-bottom:8px")}>You haven&apos;t picked your Top 10 yet.</div>
                         <span onClick={v.openComposeForMonthly} style={sx("font:700 11px 'JetBrains Mono';color:#3F6B4F;text-decoration:underline;cursor:pointer")}>PICK YOUR TOP 10 →</span>
                       </div>
                     )}
@@ -1091,7 +1174,7 @@ export default class App extends React.Component {
 
                 <div style={sx('border-top:1px solid rgba(30,27,24,0.3);padding-top:18px')}>
                   <div style={sx("font:700 12px 'JetBrains Mono';color:#B7472A;letter-spacing:0.05em;margin-bottom:8px")}>DANGER ZONE</div>
-                  <div style={sx("font:400 12px/1.5 'Arimo';color:#6b6156;margin-bottom:10px")}>Deleting your account removes your page, charts and recommendations for everyone. This can't be undone.</div>
+                  <div style={sx("font:400 12px/1.5 'Arimo';color:#6b6156;margin-bottom:10px")}>Deleting your account removes your page, charts and recommendations for everyone. This can&apos;t be undone.</div>
                   <div onClick={v.askDeleteAccount} style={sx("display:inline-block;border:1px solid #B7472A;color:#B7472A;font:700 11px 'JetBrains Mono';padding:9px 16px;letter-spacing:0.05em;cursor:pointer")}>DELETE ACCOUNT</div>
                 </div>
               </>

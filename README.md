@@ -9,6 +9,11 @@ after transit-system print ephemera: cream paper, rule lines, and a monthly
 
 Implemented from the `Retro Music Social` design as a standalone Next.js app.
 
+> **Status: demo becoming an app.** Everything below runs, but the data is
+> seeded in memory and the integrations are simulated — a refresh resets it.
+> [`docs/ROADMAP.md`](docs/ROADMAP.md) inventories every workflow and sequences
+> the work to make it real. Phase 1 (TypeScript, tests, CI) is done.
+
 ## Running it
 
 ```bash
@@ -18,18 +23,33 @@ npm run build    # static export to out/
 npm run preview  # serve the exported build
 ```
 
+No configuration required — no database, no API keys, no `.env`. That is
+deliberate and meant to stay true: see [`.env.example`](.env.example).
+
+## Developing
+
+```bash
+npm run check      # typecheck + lint + format + unit tests (what CI runs)
+npm test           # unit tests only
+npm run test:e2e   # Playwright, against the built output
+```
+
+TypeScript runs strict. Unit tests use Vitest with Testing Library; end-to-end
+tests use Playwright against the static export, with no secrets, so CI passes
+on a fork. See [`CONTRIBUTING.md`](CONTRIBUTING.md).
+
 ## Screens
 
-| Screen | What it does |
-| --- | --- |
-| **Landing** | Entry point into the five-step setup. |
-| **Onboarding** | Welcome → connect a service → name/handle/bio → pick modules → done. Handles are checked against the directory; a taken handle blocks the step. |
-| **Home** | Your page. Toggle modules on/off, drag cards to reorder, expand a card to full width, and switch grid density (compact / comfortable / spacious). |
-| **Friends** | Search the directory, add friends, request to follow private accounts, remove or block from the row menu. |
-| **Friend page** | A friend's public wall — or a locked page with a follow request if they're private. |
-| **Notifications** | Unread badge in the nav; rows deep-link to the relevant screen. |
-| **Settings** | Account (with a delete-account danger zone), service connections, privacy, and notification preferences. |
-| **Playlist** | The shared *Rooftop Party 2026* playlist, including duplicate-add conflicts. |
+| Screen            | What it does                                                                                                                                      |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Landing**       | Entry point into the five-step setup.                                                                                                             |
+| **Onboarding**    | Welcome → connect a service → name/handle/bio → pick modules → done. Handles are checked against the directory; a taken handle blocks the step.   |
+| **Home**          | Your page. Toggle modules on/off, drag cards to reorder, expand a card to full width, and switch grid density (compact / comfortable / spacious). |
+| **Friends**       | Search the directory, add friends, request to follow private accounts, remove or block from the row menu.                                         |
+| **Friend page**   | A friend's public wall — or a locked page with a follow request if they're private.                                                               |
+| **Notifications** | Unread badge in the nav; rows deep-link to the relevant screen.                                                                                   |
+| **Settings**      | Account (with a delete-account danger zone), service connections, privacy, and notification preferences.                                          |
+| **Playlist**      | The shared _Rooftop Party 2026_ playlist, including duplicate-add conflicts.                                                                      |
 
 ## Home modules
 
@@ -61,15 +81,15 @@ The app models the states a real integration hits, not just the happy path:
   serve with no Node runtime. Unlike the previous Vite `base: './'`, Next emits
   absolute asset paths — to serve from a sub-path, set `basePath` and
   `assetPrefix` in `next.config.mjs`.
-- **Layout.** `src/app/layout.jsx` holds the document shell, `metadata`, and the
-  font links; `src/app/page.jsx` is the single route and renders `<App />`.
-- **One client component.** `src/App.jsx` carries `'use client'` — the whole app
+- **Layout.** `src/app/layout.tsx` holds the document shell, `metadata`, and the
+  font links; `src/app/page.tsx` is the single route and renders `<App />`.
+- **One client component.** `src/App.tsx` carries `'use client'` — the whole app
   is interactive, so it hydrates as a unit. It has no browser-only APIs, so the
   landing screen still prerenders to static HTML at build time.
 - **State** lives in a single `App` class component. `renderVals()` derives every
   display value (labels, colors, toggle positions) from state in one place,
   keeping the JSX free of branching logic.
-- **Styling** is inline, carried over verbatim from the design. `src/sx.js`
+- **Styling** is inline, carried over verbatim from the design. `src/sx.ts`
   parses those CSS strings into React style objects and memoizes the result, so
   the styling stays byte-for-byte comparable to the source rather than being
   hand-translated.
