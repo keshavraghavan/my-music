@@ -41,92 +41,92 @@ already reflect them.
 Every workflow the product implies, with what actually exists today. This is the
 scope of "fully functional."
 
-### A. Identity & access — *does not exist in any form*
+### A. Identity & access — _does not exist in any form_
 
-| Workflow | Today | Needed |
-| --- | --- | --- |
-| Sign up / sign in | None. `startOnboarding()` jumps to a form | Auth.js: email magic-link + OAuth (Spotify as an identity provider) |
-| Session persistence | None | HTTP-only session cookie, server-side session lookup |
-| Sign out | None | Session revoke + redirect |
-| Handle availability | `DIRECTORY_HANDLES.includes()` on an 8-name array (`App.jsx:22`) | Debounced server check + unique DB constraint (race-safe) |
-| Onboarding completion | `onboardStep` counter; `obNext()` at step 4 routes home | Persisted `onboarding_completed_at`; resumable across sessions; server-side gate |
-| Account deletion | `confirmAction()` case `delete-account` → `route: 'landing'` (`App.jsx:271`) | Real cascade delete or soft-delete + grace period, plus data export |
-| Password/email change, reauth | None | Standard flows |
+| Workflow                      | Today                                                                        | Needed                                                                           |
+| ----------------------------- | ---------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| Sign up / sign in             | None. `startOnboarding()` jumps to a form                                    | Auth.js: email magic-link + OAuth (Spotify as an identity provider)              |
+| Session persistence           | None                                                                         | HTTP-only session cookie, server-side session lookup                             |
+| Sign out                      | None                                                                         | Session revoke + redirect                                                        |
+| Handle availability           | `DIRECTORY_HANDLES.includes()` on an 8-name array (`App.jsx:22`)             | Debounced server check + unique DB constraint (race-safe)                        |
+| Onboarding completion         | `onboardStep` counter; `obNext()` at step 4 routes home                      | Persisted `onboarding_completed_at`; resumable across sessions; server-side gate |
+| Account deletion              | `confirmAction()` case `delete-account` → `route: 'landing'` (`App.jsx:271`) | Real cascade delete or soft-delete + grace period, plus data export              |
+| Password/email change, reauth | None                                                                         | Standard flows                                                                   |
 
 ### B. Profile & page building
 
-| Workflow | Today | Needed |
-| --- | --- | --- |
+| Workflow                 | Today                                                              | Needed                                                         |
+| ------------------------ | ------------------------------------------------------------------ | -------------------------------------------------------------- |
 | Edit name / handle / bio | `accountForm` state; `saveAccount()` shows a toast (`App.jsx:237`) | Validated server action, persisted, handle-uniqueness enforced |
-| Avatar / photo | "ADD PHOTO" is a dashed circle placeholder (`App.jsx:577`) | Real upload: presigned S3/R2 PUT, resize, moderation hook |
-| Module on/off | `modules` object in state | `page_modules` table per user |
-| Drag reorder | `dropOn()` reorders `order` array (`App.jsx:115`) | Persist position; optimistic update + server reconcile |
-| Expand / collapse card | `expanded` object | Persist `span` per module |
-| Grid density | `spacing` state | Persist as a user preference |
-| Edit mode | `editMode` toggle | Keep client-only; fine as-is |
+| Avatar / photo           | "ADD PHOTO" is a dashed circle placeholder (`App.jsx:577`)         | Real upload: presigned S3/R2 PUT, resize, moderation hook      |
+| Module on/off            | `modules` object in state                                          | `page_modules` table per user                                  |
+| Drag reorder             | `dropOn()` reorders `order` array (`App.jsx:115`)                  | Persist position; optimistic update + server reconcile         |
+| Expand / collapse card   | `expanded` object                                                  | Persist `span` per module                                      |
+| Grid density             | `spacing` state                                                    | Persist as a user preference                                   |
+| Edit mode                | `editMode` toggle                                                  | Keep client-only; fine as-is                                   |
 
-### C. Music service integration — *entirely simulated*
+### C. Music service integration — _entirely simulated_
 
-| Workflow | Today | Needed |
-| --- | --- | --- |
-| Connect service | `connectService()` sets `connected.spotify = true` (`App.jsx:234`) | Real OAuth 2.0 + PKCE, encrypted token storage, refresh-token rotation |
-| Disconnect | Confirm modal flips the boolean | Token revoke at provider + local purge |
-| Now Playing | Hardcoded literal in `renderVals()` (`App.jsx:444`) | Poll `/me/player/currently-playing`; cache; SSE or short-poll to the client |
-| Dual-source conflict | `bothConnected` flag renders a "which to trust" prompt | Real precedence rule + persisted user preference |
-| Charts (Top 50/100) | Two hardcoded 6–8 item arrays (`App.jsx:310-320`) | Aggregate from stored play history; windowed (7d/30d/all); ranked with movement deltas |
-| Transit Receipt | `topSongs.slice(0,5)` with fabricated minutes (`App.jsx:321`) | Real monthly aggregate: play counts, total listening time, month boundaries in the user's timezone |
-| Track search | `TRACK_POOL.filter()` over 8 tracks (`App.jsx:224`) | Provider catalog search, debounced, paginated |
-| Backfill on connect | None | Import recent history at connect time so the page isn't empty |
-| Token expiry / revocation | None | Detect 401, refresh, and surface a "reconnect" state |
+| Workflow                  | Today                                                              | Needed                                                                                             |
+| ------------------------- | ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------- |
+| Connect service           | `connectService()` sets `connected.spotify = true` (`App.jsx:234`) | Real OAuth 2.0 + PKCE, encrypted token storage, refresh-token rotation                             |
+| Disconnect                | Confirm modal flips the boolean                                    | Token revoke at provider + local purge                                                             |
+| Now Playing               | Hardcoded literal in `renderVals()` (`App.jsx:444`)                | Poll `/me/player/currently-playing`; cache; SSE or short-poll to the client                        |
+| Dual-source conflict      | `bothConnected` flag renders a "which to trust" prompt             | Real precedence rule + persisted user preference                                                   |
+| Charts (Top 50/100)       | Two hardcoded 6–8 item arrays (`App.jsx:310-320`)                  | Aggregate from stored play history; windowed (7d/30d/all); ranked with movement deltas             |
+| Transit Receipt           | `topSongs.slice(0,5)` with fabricated minutes (`App.jsx:321`)      | Real monthly aggregate: play counts, total listening time, month boundaries in the user's timezone |
+| Track search              | `TRACK_POOL.filter()` over 8 tracks (`App.jsx:224`)                | Provider catalog search, debounced, paginated                                                      |
+| Backfill on connect       | None                                                               | Import recent history at connect time so the page isn't empty                                      |
+| Token expiry / revocation | None                                                               | Detect 401, refresh, and surface a "reconnect" state                                               |
 
 ### D. Social graph
 
-| Workflow | Today | Needed |
-| --- | --- | --- |
-| Directory search | Filters 8 hardcoded `PEOPLE` (`App.jsx:359`) | Indexed search over real users, paginated, block-aware |
-| Follow a **public** profile | Sets `relations[id] = 'friend'` instantly (`App.jsx:148`) | Takes effect immediately — `follows` row created `accepted`, no approval |
-| Request to follow a **private** profile | Sets `'requested'` | `follows` row created `pending`; content stays gated until approved |
-| **Accept / decline a request** | **Missing entirely** — requests can be sent, never received or accepted | Incoming-request inbox, accept/decline, notification to the requester |
-| Cancel a sent request | Missing | Requester withdraws a `pending` row |
-| Unfollow | Conflated with "remove friend" | Delete own edge only; the reverse edge is untouched |
-| Remove friend | Confirm → `'none'` | Delete edge both directions; revoke content access |
-| Block | Confirm → `'blocked'` | **Enforced**: hide profile, strip from feeds/search, block DMs/recs both ways |
-| Unblock / blocked list | Missing | Settings screen listing blocks |
-| Privacy enforcement | `isPrivateProfile` toggles a boolean; **nothing is actually gated** | Server-side authorization on every profile/feed/wall read |
+| Workflow                                | Today                                                                   | Needed                                                                        |
+| --------------------------------------- | ----------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| Directory search                        | Filters 8 hardcoded `PEOPLE` (`App.jsx:359`)                            | Indexed search over real users, paginated, block-aware                        |
+| Follow a **public** profile             | Sets `relations[id] = 'friend'` instantly (`App.jsx:148`)               | Takes effect immediately — `follows` row created `accepted`, no approval      |
+| Request to follow a **private** profile | Sets `'requested'`                                                      | `follows` row created `pending`; content stays gated until approved           |
+| **Accept / decline a request**          | **Missing entirely** — requests can be sent, never received or accepted | Incoming-request inbox, accept/decline, notification to the requester         |
+| Cancel a sent request                   | Missing                                                                 | Requester withdraws a `pending` row                                           |
+| Unfollow                                | Conflated with "remove friend"                                          | Delete own edge only; the reverse edge is untouched                           |
+| Remove friend                           | Confirm → `'none'`                                                      | Delete edge both directions; revoke content access                            |
+| Block                                   | Confirm → `'blocked'`                                                   | **Enforced**: hide profile, strip from feeds/search, block DMs/recs both ways |
+| Unblock / blocked list                  | Missing                                                                 | Settings screen listing blocks                                                |
+| Privacy enforcement                     | `isPrivateProfile` toggles a boolean; **nothing is actually gated**     | Server-side authorization on every profile/feed/wall read                     |
 
 ### E. Content & interaction
 
-| Workflow | Today | Needed |
-| --- | --- | --- |
-| Recommend a track to a friend | `postRecommendation()` prepends to `theoWall` — and **only ever Theo's wall** (`App.jsx:219`, `379`) | Real post to any user's wall, authorized by relationship |
-| Friend wall | Only `theok` has one; every other friend renders empty | Per-user wall, paginated |
-| Receive recommendations | Three seeded `recs` | Real inbox, ordered, paginated |
-| Hide / report a rec | `status: 'hidden'` / `'reported'` in memory (`App.jsx:162`) | Persist; report row + email alert to the operator |
-| Moderation follow-up | **Missing** — "We'll take a look" is a lie today | v1: persisted `reports` row with status + email alert. Admin queue ships later |
-| Feed ("Line Updates") | Four hardcoded strings (`App.jsx:438`) | Real activity feed: fan-out-on-read from followees' events, paginated, block-filtered |
-| Monthly Top 10 | Add/remove in memory, cap of 10 | Persist; enforce cap and dedupe server-side |
-| Create a playlist | Missing — one playlist is hardcoded | Name, description, visibility; creator becomes owner |
-| **Invite friends at creation** | **Missing** | Creation flow offers "add friends"; selected friends get an `INVITE` |
-| **Accept / decline an invite** | **Missing** | Invitee confirms before joining; only then may they add tracks |
-| Invite after creation / revoke | Missing | Owner invites or removes collaborators from playlist settings |
-| Add a track | `postRecommendation()` playlist branch (`App.jsx:211`) | Authorized: owner or **accepted** collaborator only |
-| Duplicate-add conflict | Nice UX; appends `'Juno Reyes'` string to `addedBy` (`App.jsx:213`) | Contributor rows keyed by user id, not display name |
-| Playlist reorder / remove track | Missing | Needed for a real playlist |
-| Leave a playlist | Missing | Collaborator exits; their contributions stay attributed |
-| Delete / edit own post | Missing | Table stakes |
+| Workflow                        | Today                                                                                                | Needed                                                                                |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| Recommend a track to a friend   | `postRecommendation()` prepends to `theoWall` — and **only ever Theo's wall** (`App.jsx:219`, `379`) | Real post to any user's wall, authorized by relationship                              |
+| Friend wall                     | Only `theok` has one; every other friend renders empty                                               | Per-user wall, paginated                                                              |
+| Receive recommendations         | Three seeded `recs`                                                                                  | Real inbox, ordered, paginated                                                        |
+| Hide / report a rec             | `status: 'hidden'` / `'reported'` in memory (`App.jsx:162`)                                          | Persist; report row + email alert to the operator                                     |
+| Moderation follow-up            | **Missing** — "We'll take a look" is a lie today                                                     | v1: persisted `reports` row with status + email alert. Admin queue ships later        |
+| Feed ("Line Updates")           | Four hardcoded strings (`App.jsx:438`)                                                               | Real activity feed: fan-out-on-read from followees' events, paginated, block-filtered |
+| Monthly Top 10                  | Add/remove in memory, cap of 10                                                                      | Persist; enforce cap and dedupe server-side                                           |
+| Create a playlist               | Missing — one playlist is hardcoded                                                                  | Name, description, visibility; creator becomes owner                                  |
+| **Invite friends at creation**  | **Missing**                                                                                          | Creation flow offers "add friends"; selected friends get an `INVITE`                  |
+| **Accept / decline an invite**  | **Missing**                                                                                          | Invitee confirms before joining; only then may they add tracks                        |
+| Invite after creation / revoke  | Missing                                                                                              | Owner invites or removes collaborators from playlist settings                         |
+| Add a track                     | `postRecommendation()` playlist branch (`App.jsx:211`)                                               | Authorized: owner or **accepted** collaborator only                                   |
+| Duplicate-add conflict          | Nice UX; appends `'Juno Reyes'` string to `addedBy` (`App.jsx:213`)                                  | Contributor rows keyed by user id, not display name                                   |
+| Playlist reorder / remove track | Missing                                                                                              | Needed for a real playlist                                                            |
+| Leave a playlist                | Missing                                                                                              | Collaborator exits; their contributions stay attributed                               |
+| Delete / edit own post          | Missing                                                                                              | Table stakes                                                                          |
 
 ### F. Notifications
 
-| Workflow | Today | Needed |
-| --- | --- | --- |
-| List + unread badge | Four seeded rows | Real per-user notification table, paginated |
-| Mark read / mark all read | In-memory map (`App.jsx:168`) | Persisted read state |
-| Deep link from row | `clickNotification()` routes by `type` (`App.jsx:169`) | Route to the specific entity, not just the screen |
-| Generation | None — notifications never get created | Emitted by domain events: rec posted, **follow request received**, **request accepted**, **playlist invite received**, **invite accepted**, track added, chart updated |
-| Actionable rows | None — rows only navigate | Follow requests and playlist invites carry accept/decline inline |
-| Preferences | `notifPrefs` booleans, unused | Respected at emit time |
-| Email / push delivery | Missing | Email digest via Resend; **operator alert on new report**; web push optional |
-| Realtime arrival | Missing | SSE channel per user |
+| Workflow                  | Today                                                  | Needed                                                                                                                                                                 |
+| ------------------------- | ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| List + unread badge       | Four seeded rows                                       | Real per-user notification table, paginated                                                                                                                            |
+| Mark read / mark all read | In-memory map (`App.jsx:168`)                          | Persisted read state                                                                                                                                                   |
+| Deep link from row        | `clickNotification()` routes by `type` (`App.jsx:169`) | Route to the specific entity, not just the screen                                                                                                                      |
+| Generation                | None — notifications never get created                 | Emitted by domain events: rec posted, **follow request received**, **request accepted**, **playlist invite received**, **invite accepted**, track added, chart updated |
+| Actionable rows           | None — rows only navigate                              | Follow requests and playlist invites carry accept/decline inline                                                                                                       |
+| Preferences               | `notifPrefs` booleans, unused                          | Respected at emit time                                                                                                                                                 |
+| Email / push delivery     | Missing                                                | Email digest via Resend; **operator alert on new report**; web push optional                                                                                           |
+| Realtime arrival          | Missing                                                | SSE channel per user                                                                                                                                                   |
 
 ### G. Cross-cutting gaps
 
@@ -193,7 +193,7 @@ src/
 
 2. **Module registry.** `core/page-builder` knows nothing about music. Modules
    self-register with `{ key, label, accent, defaultSpan, Component,
-   loadData }`. Today's seven music modules become registry entries; a photo
+loadData }`. Today's seven music modules become registry entries; a photo
    app registers different ones and the whole drag/toggle/expand/persist
    machinery is inherited unchanged.
 
@@ -260,16 +260,36 @@ sent to the client.
 Each phase leaves the app runnable, and lands as its own commit on
 `claude/app-workflows-plan-v0cgr8`.
 
-### Phase 1 — Foundation *(no behavior change)*
-TypeScript (strict) + `tsconfig` path aliases · ESLint + Prettier · Vitest +
-Testing Library · Playwright with the preinstalled Chromium
-(`PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers`, never `playwright install`) ·
-GitHub Actions CI (typecheck, lint, unit, e2e, build) · `LICENSE` (MIT) ·
-`CONTRIBUTING.md` · `CODE_OF_CONDUCT.md` · issue/PR templates · `.env.example`.
-Rename `.jsx → .tsx`, type the existing state shape.
-**Ships:** identical app, now with a safety net.
+### Phase 1 — Foundation ✅ _done — no behavior change_
 
-### Phase 2 — Routing + decomposition *(no behavior change)*
+TypeScript (strict, plus `noUncheckedIndexedAccess` and
+`exactOptionalPropertyTypes`) with `@/*` path aliases; `.jsx → .tsx` and the
+state shape typed in `src/types.ts` · ESLint + Prettier · Vitest + Testing
+Library (33 unit tests) · Playwright (5 e2e specs against the static export) ·
+GitHub Actions CI · MIT `LICENSE` · `CONTRIBUTING.md` · `CODE_OF_CONDUCT.md` ·
+issue/PR templates · `.env.example`.
+
+Notes carried forward:
+
+- **The a11y debt now has a number: 151 lint warnings.** `jsx-a11y` rules are
+  set to `warn` so the backlog is visible without failing CI, and get promoted
+  to `error` per screen as Phase 2 converts them.
+- **`src/App.tsx` is excluded from Prettier** until Phase 2 decomposes it —
+  reflowing ~800 verbatim inline style strings would make the diff against the
+  original design unreviewable.
+- **Known bug, pinned by a test rather than fixed:** display names already end
+  in a period, and `showToast()` appends another, so friend toasts read
+  "Wren L..". Fix belongs with the Phase 2 copy pass.
+- **Dead state:** `compose.showDup` is written on a duplicate playlist add and
+  never read — the warning is derived independently as `showDuplicateWarning`.
+  Kept for now so the conversion stayed behaviour-preserving; delete in Phase 2.
+- TypeScript is pinned to 6.x: Next 16 cannot use the TypeScript 7 native
+  compiler without an experimental flag, which a template should not require.
+
+**Shipped:** identical app, now with a safety net.
+
+### Phase 2 — Routing + decomposition _(no behavior change)_
+
 Replace the `route` string with real App Router routes. Split `App.jsx` into
 per-screen components and module components. Extract `core/ui` primitives —
 and in doing so **fix accessibility**: real `<button>`, keyboard-operable
@@ -281,6 +301,7 @@ Add responsive breakpoints.
 two defects that would embarrass an OSS release.
 
 ### Phase 3 — Data layer
+
 Postgres + Drizzle, schema and migrations, `docker-compose.yml` for local dev.
 Seed script that reproduces today's `PEOPLE`/`TRACK_POOL` fixtures so the demo
 is byte-comparable. Repository functions with unit tests. Screens read from the
@@ -288,6 +309,7 @@ DB through server components; mutations still stubbed.
 **Ships:** data survives a refresh.
 
 ### Phase 4 — Auth & authorization
+
 Auth.js: email magic-link + Spotify OAuth. Real signup/login/logout, resumable
 server-backed onboarding, `requireUser()` guards, CSRF, rate limiting.
 Implement `core/graph` **authorization** — the single function every read path
@@ -296,6 +318,7 @@ blocks. Account deletion and data export.
 **Ships:** multiple real users; privacy is real, not cosmetic.
 
 ### Phase 5 — Core social workflows
+
 **Follow graph:** immediate follow for public profiles, request → accept/decline
 for private ones (closing the missing-acceptance gap), cancel, unfollow, plus
 the request inbox. Block enforcement end-to-end.
@@ -310,6 +333,7 @@ with rollback; loading/error/empty states everywhere.
 **Ships:** every button does what it claims.
 
 ### Phase 6 — Music integrations
+
 `MusicProvider` interface + `mock` (default) + real Spotify (OAuth/PKCE,
 encrypted tokens, refresh rotation, 401 → reconnect state). Play ingestion,
 chart computation with rank deltas, monthly receipt aggregation, real catalog
@@ -318,6 +342,7 @@ search, connect-time backfill. Apple Music stub documented as
 **Ships:** real listening data drives the page.
 
 ### Phase 7 — Realtime, polish, template docs
+
 SSE for notifications and Now Playing · avatar upload (presigned) · email
 digests · OG images and shareable profile URLs · perf pass · `docs/`:
 architecture, "fork this into your own social site", writing a module, writing
@@ -380,17 +405,17 @@ friendship while `requestFollow()` implies following, and the copy says
 **Decided:** one asymmetric follow relationship, where the target profile's
 privacy decides whether approval is needed.
 
-| Target profile | Result |
-| --- | --- |
-| Public | Follow takes effect immediately; content visible at once |
-| Private | Request created `pending`; content stays gated until accepted |
+| Target profile | Result                                                        |
+| -------------- | ------------------------------------------------------------- |
+| Public         | Follow takes effect immediately; content visible at once      |
+| Private        | Request created `pending`; content stays gated until accepted |
 
 The requester can cancel a pending request; the recipient can accept or decline
 from the notification row or a request inbox. Unfollowing removes only the
 follower's own edge. "Friends" survives as UI vocabulary for a mutual pair, not
 as a stored entity.
 
-*Why it matters for the template:* one `follows` table covers public-follow
+_Why it matters for the template:_ one `follows` table covers public-follow
 (Twitter-shaped) and private-approval (Instagram-shaped) products, so a fork
 picks its social model by toggling a profile flag rather than by writing a
 second system.

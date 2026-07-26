@@ -7,6 +7,17 @@ node_modules
 out
 next-env.d.ts
 
+# Environment — .env.example is committed, real values are not
+.env
+.env.local
+.env.*.local
+
+# Tests
+playwright-report
+test-results
+coverage
+tsconfig.tsbuildinfo
+
 # Editor
 .idea
 .vscode/*

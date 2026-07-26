@@ -1,13 +1,15 @@
+import type { Metadata, Viewport } from 'next';
+import type { ReactNode } from 'react';
 import './globals.css';
 
-export const metadata = {
+export const metadata: Metadata = {
   title: 'MyMusic.',
   description:
     "MyMusic — your page, your charts, your friends' picks. A retro music-social platform.",
   icons: { icon: '/favicon.svg' },
 };
 
-export const viewport = {
+export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
 };
@@ -18,7 +20,7 @@ export const viewport = {
 const FONTS_HREF =
   'https://fonts.googleapis.com/css2?family=Tinos:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@400;500;700&family=Arimo:ital,wght@0,400;0,600;0,700;1,400&display=swap';
 
-export default function RootLayout({ children }) {
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <head>

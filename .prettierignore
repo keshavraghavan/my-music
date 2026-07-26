@@ -1,0 +1,12 @@
+.next
+out
+node_modules
+package-lock.json
+next-env.d.ts
+playwright-report
+test-results
+
+# src/App.tsx is excluded until Phase 2 decomposes it. Its JSX is a verbatim
+# port of the design's markup, and reflowing ~800 inline style strings would
+# make the diff against the original unreviewable. See docs/ROADMAP.md.
+src/App.tsx
