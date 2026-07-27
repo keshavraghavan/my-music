@@ -1,6 +1,8 @@
 // @vitest-environment node
 
 import { describe, expect, it } from 'vitest';
+import { getTableName } from 'drizzle-orm';
+import { authAdapterSchema } from '@/core/auth/adapter-schema';
 import { shouldTrustAuthHost } from '@/core/auth/trusted-host';
 import { databasePoolSize } from '@/core/db/client';
 import {
@@ -55,6 +57,13 @@ describe('Phase 7 realtime and infrastructure seams', () => {
         e2e: '1',
       }),
     ).toBe(false);
+  });
+
+  it('maps Auth.js to the migrated plural table names', () => {
+    expect(getTableName(authAdapterSchema.usersTable)).toBe('users');
+    expect(getTableName(authAdapterSchema.accountsTable)).toBe('accounts');
+    expect(getTableName(authAdapterSchema.sessionsTable)).toBe('sessions');
+    expect(getTableName(authAdapterSchema.verificationTokensTable)).toBe('verification_tokens');
   });
 
   it('creates a short-lived signed avatar PUT owned by the current user', () => {
