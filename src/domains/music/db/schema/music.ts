@@ -1,4 +1,5 @@
 import {
+  boolean,
   index,
   integer,
   jsonb,
@@ -35,6 +36,8 @@ export const serviceConnections = pgTable(
     refreshTokenEncrypted: text('refresh_token_encrypted'),
     expiresAt: timestamp('expires_at', { withTimezone: true }),
     scopes: text('scopes').array().default([]).notNull(),
+    reconnectRequired: boolean('reconnect_required').default(false).notNull(),
+    lastSyncedAt: timestamp('last_synced_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
   },
@@ -80,8 +83,16 @@ export const plays = pgTable(
     playedAt: timestamp('played_at', { withTimezone: true }).notNull(),
     msPlayed: integer('ms_played').notNull(),
     source: text('source').notNull(),
+    providerPlayId: text('provider_play_id'),
   },
-  (table) => [index('plays_user_time_idx').on(table.userId, table.playedAt)],
+  (table) => [
+    index('plays_user_time_idx').on(table.userId, table.playedAt),
+    uniqueIndex('plays_user_source_provider_id_unique').on(
+      table.userId,
+      table.source,
+      table.providerPlayId,
+    ),
+  ],
 );
 
 export const chartSnapshots = pgTable(

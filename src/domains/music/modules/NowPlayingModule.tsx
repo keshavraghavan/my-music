@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { ModuleCard } from '@/core/page-builder';
 import { Button, TextLink } from '@/core/ui';
 import { routes } from '@/core/routes';
@@ -11,9 +12,30 @@ const CARD_CSS = 'border:1px solid rgba(30,27,24,0.3);padding:22px 24px 18px';
 
 export function NowPlayingModule() {
   const { connected, nowPlayingSource, nowPlaying } = useAppState();
+  const [liveNowPlaying, setLiveNowPlaying] = useState(nowPlaying);
   const actions = useAppActions();
-  const noService = !connected.spotify && !connected.apple;
+  const noService = !connected.mock && !connected.spotify && !connected.apple;
   const bothConnected = connected.spotify && connected.apple;
+
+  useEffect(() => {
+    if (noService) return;
+    let active = true;
+    const refresh = () => {
+      void fetch('/api/music/now-playing')
+        .then(async (response) => {
+          if (!response.ok) throw new Error('Now Playing failed');
+          const value = (await response.json()) as typeof nowPlaying & { current?: null };
+          if (active && value.current !== null) setLiveNowPlaying(value);
+        })
+        .catch(() => undefined);
+    };
+    refresh();
+    const timer = window.setInterval(refresh, 30_000);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
+  }, [noService, nowPlaying]);
 
   return (
     <ModuleCard moduleKey="nowPlaying" label="Now Playing" css={CARD_CSS}>
@@ -39,7 +61,11 @@ export function NowPlayingModule() {
           >
             <div style={sx('display:flex;align-items:center;gap:7px')}>
               <span style={sx("font:700 12px 'Arimo'")}>
-                {nowPlayingSource === 'spotify' ? 'Spotify' : 'Apple Music'}
+                {nowPlayingSource === 'spotify'
+                  ? 'Spotify'
+                  : nowPlayingSource === 'apple'
+                    ? 'Apple Music'
+                    : 'Demo Library'}
               </span>
               <span
                 aria-hidden="true"
@@ -92,28 +118,30 @@ export function NowPlayingModule() {
                   "font:400 22px/1.2 'Tinos';white-space:nowrap;overflow:hidden;text-overflow:ellipsis",
                 )}
               >
-                {nowPlaying.track}
+                {liveNowPlaying.track}
               </div>
               <div
                 style={sx(
                   "font:600 11.5px 'JetBrains Mono';color:#6b6156;letter-spacing:0.03em;margin-top:6px;text-transform:uppercase",
                 )}
               >
-                {nowPlaying.artist}
+                {liveNowPlaying.artist}
               </div>
               <div style={sx("font:400 11.5px 'JetBrains Mono';color:#6b6156;font-style:italic")}>
-                {nowPlaying.album}
+                {liveNowPlaying.album}
               </div>
             </div>
           </div>
           <div style={sx('margin-top:16px')}>
             <div
               role="progressbar"
-              aria-label={`${nowPlaying.track} progress`}
-              aria-valuenow={parseInt(nowPlaying.progressPct, 10)}
+              aria-label={`${liveNowPlaying.track} progress`}
+              aria-valuenow={parseInt(liveNowPlaying.progressPct, 10)}
               style={sx('height:3px;background:rgba(30,27,24,0.12)')}
             >
-              <div style={sx(`height:100%;width:${nowPlaying.progressPct};background:#3F6B4F`)} />
+              <div
+                style={sx(`height:100%;width:${liveNowPlaying.progressPct};background:#3F6B4F`)}
+              />
             </div>
           </div>
           <div
@@ -123,7 +151,7 @@ export function NowPlayingModule() {
           />
           <div style={sx('display:flex;justify-content:space-between;align-items:center')}>
             <span style={sx("font:500 10.5px 'JetBrains Mono';color:#6b6156")}>
-              {nowPlaying.updated}
+              {liveNowPlaying.updated}
             </span>
           </div>
         </>

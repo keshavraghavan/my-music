@@ -9,14 +9,12 @@ after transit-system print ephemera: cream paper, rule lines, and a monthly
 
 Implemented from the `Retro Music Social` design as a standalone Next.js app.
 
-> **Status: authenticated app, social mutations still in progress.** Accounts,
-> sessions, onboarding, privacy enforcement, account export, and deletion are
-> real; Phase 5 replaces the remaining simulated social mutations.
+> **Status: authenticated app with a persisted follow graph and music-provider
+> integrations.** Accounts, sessions, onboarding, privacy enforcement, account
+> export, deletion, follow requests, blocking, and listening ingestion are real.
 > [`docs/ROADMAP.md`](docs/ROADMAP.md) inventories every workflow and sequences
-> the work to make it real. Phase 1 (TypeScript, tests, CI) and Phase 2 (real
-> routes, accessible components, responsive layout), Phase 3 (Postgres,
-> Drizzle, repositories, server reads), and Phase 4 (Auth.js and authorization)
-> are done.
+> the remaining work. Phase 6 is complete; the broader Phase 5 social-workflow
+> list remains in progress beyond its shipped follow graph.
 
 ## Running it
 
@@ -39,8 +37,19 @@ npm run dev
 ```
 
 Magic links are printed to the development console when `RESEND_API_KEY` is
-unset. Set Spotify credentials plus `TOKEN_ENCRYPTION_KEY` to enable Spotify
-sign-in; OAuth tokens are encrypted at rest.
+unset. With no music credentials, provider-backed features use the deterministic
+mock adapter. Set Spotify credentials plus `TOKEN_ENCRYPTION_KEY` for Spotify
+sign-in and listening access; OAuth tokens are encrypted at rest.
+
+Register both redirect URIs when using both Spotify features:
+
+- `<AUTH_URL>/api/auth/callback/spotify` for identity sign-in.
+- `<AUTH_URL>/api/music/callback/spotify` for the separate listening-data PKCE
+  flow.
+
+Apple Music is a documented adapter stub because MusicKit requires a paid Apple
+Developer account and an app-specific user-token flow. A fork can implement
+those pieces behind the same `MusicProvider` interface.
 
 ## Developing
 
@@ -97,8 +106,12 @@ The app models the states a real integration hits, not just the happy path:
 ## Notes on the implementation
 
 - **Postgres + Drizzle.** Server Components hydrate the UI from repository
-  queries. `src/state/client-store.tsx` holds only transient UI state and
-  the social mutations scheduled for Phase 5.
+  queries. Listening imports are idempotent, charts retain prior rank, and
+  monthly receipts use the profile timezone.
+- **MusicProvider.** Mock, Spotify, and Apple adapters share catalog search,
+  Now Playing, recent-play, and top-item methods. Spotify refreshes tokens,
+  rotates refresh tokens, retries once after a 401, and then surfaces a
+  reconnect state.
 - **Auth.js.** Database sessions guard app routes; email magic links work
   without an email vendor in development, Spotify is optional, and OAuth
   credentials are AES-256-GCM encrypted at rest.

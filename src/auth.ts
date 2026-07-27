@@ -18,6 +18,8 @@ if (process.env.SPOTIFY_CLIENT_ID && process.env.SPOTIFY_CLIENT_SECRET) {
     Spotify({
       clientId: process.env.SPOTIFY_CLIENT_ID,
       clientSecret: process.env.SPOTIFY_CLIENT_SECRET,
+      // Identity access stays intentionally narrow. Listening permissions use
+      // the separate PKCE flow under /api/music/connect/spotify.
       authorization: { params: { scope: 'user-read-email' } },
     }),
   );

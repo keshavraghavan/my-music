@@ -17,6 +17,11 @@ beforeAll(async () => {
     'utf8',
   );
   await client.exec(migration.replaceAll('--> statement-breakpoint', ''));
+  const phaseSixMigration = await readFile(
+    resolve(process.cwd(), 'drizzle/0001_misty_doctor_strange.sql'),
+    'utf8',
+  );
+  await client.exec(phaseSixMigration.replaceAll('--> statement-breakpoint', ''));
 
   const database = drizzle(client);
   await database.insert(users).values([

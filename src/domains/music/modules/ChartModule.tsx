@@ -12,7 +12,7 @@ const CARD_CSS = 'border:1px solid rgba(30,27,24,0.3);padding:22px 24px';
 export function ChartModule() {
   const { connected, chartTab, topSongs, topAlbums } = useAppState();
   const actions = useAppActions();
-  const noService = !connected.spotify && !connected.apple;
+  const noService = !connected.mock && !connected.spotify && !connected.apple;
   const items = chartTab === 'songs' ? topSongs : topAlbums;
 
   return (
@@ -62,6 +62,19 @@ export function ChartModule() {
                 </span>
                 <span className={styles.trackName}>{item.title}</span>
                 <span className={styles.byline}>{item.artist}</span>
+                {item.movement != null && (
+                  <span
+                    aria-label={`${Math.abs(item.movement)} places ${
+                      item.movement >= 0 ? 'up' : 'down'
+                    }`}
+                  >
+                    {item.movement === 0
+                      ? '—'
+                      : item.movement > 0
+                        ? `↑${item.movement}`
+                        : `↓${Math.abs(item.movement)}`}
+                  </span>
+                )}
               </li>
             ))}
           </ol>
