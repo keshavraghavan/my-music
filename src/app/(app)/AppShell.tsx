@@ -6,6 +6,7 @@ import { routes } from '@/core/routes';
 import { logout } from '@/core/auth/actions';
 import { deleteMyAccount } from '@/core/account/actions';
 import { Avatar, ConfirmDialog, TextLink, Toast, cx } from '@/core/ui';
+import { REALTIME_POLL_INTERVAL_MS, realtimePollingEnabled } from '@/core/realtime/polling';
 import { ComposeModal } from '@/domains/music/compose/ComposeModal';
 import { useAppActions, useAppState } from '@/state/client-store';
 import type { AppNotification, NowPlaying } from '@/types';
@@ -46,18 +47,44 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, [pathname, actions]);
 
   useEffect(() => {
-    if (typeof EventSource === 'undefined') return;
-    const events = new EventSource('/api/stream');
-    const notificationsListener = (event: MessageEvent<string>) => {
-      actions.receiveNotifications(JSON.parse(event.data) as AppNotification[]);
+    let stopped = false;
+    let polling = false;
+    let timer: ReturnType<typeof setInterval> | undefined;
+
+    async function poll() {
+      if (stopped || polling || !realtimePollingEnabled(document.visibilityState)) return;
+      polling = true;
+      try {
+        const response = await fetch('/api/poll', { cache: 'no-store' });
+        if (!response.ok || stopped) return;
+        const snapshot = (await response.json()) as {
+          notifications?: AppNotification[];
+          nowPlaying?: NowPlaying | null;
+        };
+        if (snapshot.notifications) actions.receiveNotifications(snapshot.notifications);
+        if (snapshot.nowPlaying) actions.receiveNowPlaying(snapshot.nowPlaying);
+      } catch {
+        // Keep the last good snapshot; the next visible interval retries.
+      } finally {
+        polling = false;
+      }
+    }
+
+    function schedule() {
+      if (timer) clearInterval(timer);
+      timer = undefined;
+      if (!realtimePollingEnabled(document.visibilityState)) return;
+      void poll();
+      timer = setInterval(() => void poll(), REALTIME_POLL_INTERVAL_MS);
+    }
+
+    document.addEventListener('visibilitychange', schedule);
+    schedule();
+    return () => {
+      stopped = true;
+      if (timer) clearInterval(timer);
+      document.removeEventListener('visibilitychange', schedule);
     };
-    const nowPlayingListener = (event: MessageEvent<string>) => {
-      const value = JSON.parse(event.data) as NowPlaying | null;
-      if (value) actions.receiveNowPlaying(value);
-    };
-    events.addEventListener('notifications', notificationsListener);
-    events.addEventListener('now-playing', nowPlayingListener);
-    return () => events.close();
   }, [actions]);
 
   function isCurrent(match: string) {
