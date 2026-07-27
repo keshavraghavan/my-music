@@ -1,6 +1,7 @@
 // @vitest-environment node
 
 import { describe, expect, it } from 'vitest';
+import { shouldTrustAuthHost } from '@/core/auth/trusted-host';
 import { databasePoolSize } from '@/core/db/client';
 import {
   isOwnedAvatarUrl,
@@ -35,6 +36,25 @@ describe('Phase 7 realtime and infrastructure seams', () => {
   it('uses one application connection behind the production pooler', () => {
     expect(databasePoolSize('production')).toBe(1);
     expect(databasePoolSize('development')).toBe(10);
+  });
+
+  it('trusts an explicitly approved production proxy without weakening the default', () => {
+    expect(shouldTrustAuthHost({ nodeEnv: 'production' })).toBe(false);
+    expect(shouldTrustAuthHost({ nodeEnv: 'production', authTrustHost: 'true' })).toBe(true);
+    expect(
+      shouldTrustAuthHost({
+        nodeEnv: 'production',
+        authUrl: 'http://127.0.0.1:3100',
+        e2e: '1',
+      }),
+    ).toBe(true);
+    expect(
+      shouldTrustAuthHost({
+        nodeEnv: 'production',
+        authUrl: 'https://untrusted.example',
+        e2e: '1',
+      }),
+    ).toBe(false);
   });
 
   it('creates a short-lived signed avatar PUT owned by the current user', () => {
