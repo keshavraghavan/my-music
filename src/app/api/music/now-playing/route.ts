@@ -1,11 +1,12 @@
 import { currentUser } from '@/core/auth/session';
 import { providerForUser } from '@/domains/music/provider-service';
+import { MusicProviderAuthError } from '@/domains/music/providers';
 
 export async function GET() {
   const user = await currentUser();
   if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
-  const provider = await providerForUser(user.id);
   try {
+    const provider = await providerForUser(user.id);
     const current = await provider.nowPlaying();
     return Response.json(
       current
@@ -28,7 +29,13 @@ export async function GET() {
         : { provider: provider.key, current: null },
       { headers: { 'Cache-Control': 'private, no-store' } },
     );
-  } catch {
+  } catch (error) {
+    if (error instanceof MusicProviderAuthError) {
+      return Response.json(
+        { error: 'Reconnect your music service to resume Now Playing.', reconnect: true },
+        { status: 409 },
+      );
+    }
     return Response.json({ error: 'Now Playing is unavailable.' }, { status: 502 });
   }
 }

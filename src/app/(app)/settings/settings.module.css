@@ -72,3 +72,21 @@
   margin: 0;
   padding: 0;
 }
+
+.serviceError {
+  border: 1px solid var(--accent-red);
+  color: var(--accent-red);
+  font: 400 12px/1.5 var(--font-body);
+  padding: 12px 14px;
+  margin-bottom: 14px;
+}
+
+.rowNoteAlert {
+  color: var(--accent-red);
+}
+
+.syncNote {
+  font: 400 12px/1.5 var(--font-body);
+  color: var(--muted);
+  margin: 14px 0 0;
+}

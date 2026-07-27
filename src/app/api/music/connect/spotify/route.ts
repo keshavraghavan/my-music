@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { NextResponse } from 'next/server';
+import { canonicalUrl } from '@/core/auth/canonical-url';
 import { currentUser } from '@/core/auth/session';
 
 const SCOPES = [
@@ -22,7 +23,7 @@ export async function GET(request: Request) {
   const verifier = randomBytes(48).toString('base64url');
   const challenge = createHash('sha256').update(verifier).digest('base64url');
   const state = randomBytes(24).toString('base64url');
-  const callback = new URL('/api/music/callback/spotify', request.url).toString();
+  const callback = canonicalUrl('/api/music/callback/spotify', request.url);
   const authorize = new URL('https://accounts.spotify.com/authorize');
   authorize.search = new URLSearchParams({
     client_id: clientId,

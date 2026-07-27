@@ -3,6 +3,7 @@ import { currentUser } from '@/core/auth/session';
 import { getDatabase } from '@/core/db/client';
 import { notifications } from '@/core/db/schema';
 import { providerForUser } from '@/domains/music/provider-service';
+import { MusicProviderAuthError } from '@/domains/music/providers';
 import type { AppNotification, NotificationKind, NowPlaying } from '@/types';
 
 export const dynamic = 'force-dynamic';
@@ -37,24 +38,39 @@ async function notificationSnapshot(userId: string): Promise<AppNotification[]> 
   }));
 }
 
-async function nowPlayingSnapshot(userId: string): Promise<NowPlaying | null> {
-  const provider = await providerForUser(userId);
-  const current = await provider.nowPlaying();
-  if (!current) return null;
+interface NowPlayingSnapshot {
+  nowPlaying: NowPlaying | null;
+  /** The connection exists but its tokens no longer work. */
+  reconnect: boolean;
+}
+
+async function nowPlayingSnapshot(userId: string): Promise<NowPlayingSnapshot> {
+  let current;
+  try {
+    const provider = await providerForUser(userId);
+    current = await provider.nowPlaying();
+  } catch (error) {
+    if (error instanceof MusicProviderAuthError) return { nowPlaying: null, reconnect: true };
+    throw error;
+  }
+  if (!current) return { nowPlaying: null, reconnect: false };
   return {
-    track: current.track.title,
-    artist: current.track.artist,
-    album: current.track.album,
-    progressPct: `${Math.min(
-      100,
-      Math.round((current.progressMs / current.track.durationMs) * 100),
-    )}%`,
-    updated: `UPDATED ${current.observedAt.toLocaleString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-    })}`,
+    reconnect: false,
+    nowPlaying: {
+      track: current.track.title,
+      artist: current.track.artist,
+      album: current.track.album,
+      progressPct: `${Math.min(
+        100,
+        Math.round((current.progressMs / current.track.durationMs) * 100),
+      )}%`,
+      updated: `UPDATED ${current.observedAt.toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+      })}`,
+    },
   };
 }
 
@@ -71,7 +87,10 @@ export async function GET() {
     {
       notifications:
         notificationResult.status === 'fulfilled' ? notificationResult.value : undefined,
-      nowPlaying: nowPlayingResult.status === 'fulfilled' ? nowPlayingResult.value : undefined,
+      nowPlaying:
+        nowPlayingResult.status === 'fulfilled' ? nowPlayingResult.value.nowPlaying : undefined,
+      musicReconnectRequired:
+        nowPlayingResult.status === 'fulfilled' ? nowPlayingResult.value.reconnect : undefined,
     },
     { headers: { 'Cache-Control': 'private, no-store' } },
   );

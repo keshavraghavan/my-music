@@ -186,6 +186,13 @@ export interface AppState {
   monthlyTracks: MonthlyTrack[];
 
   connected: Record<ServiceKey, boolean>;
+  /**
+   * Services whose stored tokens were rejected. The connection row still
+   * exists, so this is not the same as never having connected — the page shows
+   * an empty state and asks for a reconnect rather than falling back to mock
+   * data the viewer would read as their own listening history.
+   */
+  needsReconnect: Record<ServiceKey, boolean>;
   nowPlayingSource: ServiceKey;
   isPrivateProfile: boolean;
 

@@ -92,6 +92,7 @@ export const INITIAL_STATE: AppState = {
   ],
 
   connected: { mock: true, spotify: false, apple: false },
+  needsReconnect: { mock: false, spotify: false, apple: false },
   nowPlayingSource: 'mock',
   isPrivateProfile: false,
 
@@ -181,6 +182,8 @@ export interface AppActions {
   readNotification: (id: string) => void;
   receiveNotifications: (notifications: AppNotification[]) => void;
   receiveNowPlaying: (nowPlaying: NowPlaying) => void;
+  /** Polling noticed the stored Spotify tokens stopped working. */
+  receiveMusicReconnectState: (required: boolean) => void;
   toggleNotifPref: (key: NotifPrefKey) => void;
 
   // compose
@@ -461,6 +464,19 @@ export function AppStateProvider({
       },
       receiveNotifications: (notifications) => setState((state) => ({ ...state, notifications })),
       receiveNowPlaying: (nowPlaying) => setState((state) => ({ ...state, nowPlaying })),
+      receiveMusicReconnectState: (required) =>
+        setState((state) =>
+          state.needsReconnect.spotify === required
+            ? state
+            : {
+                ...state,
+                needsReconnect: { ...state.needsReconnect, spotify: required },
+                connected: {
+                  ...state.connected,
+                  spotify: required ? false : state.connected.spotify,
+                },
+              },
+        ),
       toggleNotifPref: (key) => {
         const enabled = !latest.current.notifPrefs[key];
         setState((state) => ({
@@ -638,6 +654,8 @@ export function AppStateProvider({
         if (service === 'spotify') {
           // Optimistic so the control responds immediately; a full navigation
           // starts the PKCE flow and the server snapshot becomes authoritative.
+          // Backing out at Spotify still lands on the callback, so the next
+          // render corrects this — it never outlives the round trip.
           setState((state) => ({
             ...state,
             connected: { ...state.connected, spotify: true },

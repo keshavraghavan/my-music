@@ -41,6 +41,13 @@ async function persistSpotifyTokens(database: Database, userId: string, tokens: 
     .where(and(eq(serviceConnections.userId, userId), eq(serviceConnections.provider, 'spotify')));
 }
 
+/**
+ * The mock provider is the zero-config fallback for someone who has never
+ * connected a service. It is *not* a fallback for a connection whose tokens
+ * were revoked — serving invented plays to someone who linked a real account
+ * presents fiction as their listening history. That case raises
+ * `MusicProviderAuthError` so callers can ask for a reconnect instead.
+ */
 export async function providerForUser(userId: string): Promise<MusicProvider> {
   const database = getDatabase();
   if (!database) return new MockMusicProvider();
@@ -49,7 +56,8 @@ export async function providerForUser(userId: string): Promise<MusicProvider> {
     .from(serviceConnections)
     .where(and(eq(serviceConnections.userId, userId), eq(serviceConnections.provider, 'spotify')))
     .limit(1);
-  if (!connection || connection.reconnectRequired) return new MockMusicProvider();
+  if (!connection) return new MockMusicProvider();
+  if (connection.reconnectRequired) throw new MusicProviderAuthError();
   return new SpotifyMusicProvider(
     {
       accessToken: decryptToken(connection.accessTokenEncrypted),
@@ -298,4 +306,48 @@ export async function syncListeningHistory(userId: string, backfill = false) {
     }
     throw error;
   }
+}
+
+/** How many connections one scheduled run will walk before yielding. */
+export const MUSIC_SYNC_BATCH_LIMIT = 200;
+
+export interface MusicSyncBatchResult {
+  synced: number;
+  inserted: number;
+  failed: number;
+}
+
+/**
+ * Connect-time backfill only fills the page once. Without a scheduled pass,
+ * charts, the receipt, and Now Playing freeze at whatever the connect import
+ * captured, so this walks every healthy connection. One user's failure is that
+ * user's failure — an expired token marks itself for reconnection inside
+ * `syncListeningHistory` and the batch keeps going.
+ */
+export async function syncAllConnectedUsers(
+  limit = MUSIC_SYNC_BATCH_LIMIT,
+): Promise<MusicSyncBatchResult> {
+  const database = getDatabase();
+  if (!database) return { synced: 0, inserted: 0, failed: 0 };
+  const connections = await database
+    .selectDistinct({ userId: serviceConnections.userId })
+    .from(serviceConnections)
+    .where(eq(serviceConnections.reconnectRequired, false))
+    .limit(limit);
+
+  let synced = 0;
+  let inserted = 0;
+  let failed = 0;
+  for (const { userId } of connections) {
+    try {
+      const result = await syncListeningHistory(userId);
+      synced += 1;
+      inserted += result.inserted;
+    } catch {
+      // Already recorded as reconnect-required when the cause was auth; any
+      // other cause is transient and the next run retries it.
+      failed += 1;
+    }
+  }
+  return { synced, inserted, failed };
 }

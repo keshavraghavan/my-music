@@ -60,9 +60,13 @@ export function AppShell({ children }: { children: ReactNode }) {
         const snapshot = (await response.json()) as {
           notifications?: AppNotification[];
           nowPlaying?: NowPlaying | null;
+          musicReconnectRequired?: boolean;
         };
         if (snapshot.notifications) actions.receiveNotifications(snapshot.notifications);
         if (snapshot.nowPlaying) actions.receiveNowPlaying(snapshot.nowPlaying);
+        if (snapshot.musicReconnectRequired !== undefined) {
+          actions.receiveMusicReconnectState(snapshot.musicReconnectRequired);
+        }
       } catch {
         // Keep the last good snapshot; the next visible interval retries.
       } finally {

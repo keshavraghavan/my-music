@@ -1,5 +1,6 @@
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
+import { canonicalUrl } from '@/core/auth/canonical-url';
 import { currentUser } from '@/core/auth/session';
 import { encryptToken } from '@/core/auth/token-crypto';
 import { getDatabase } from '@/core/db/client';
@@ -21,6 +22,11 @@ export async function GET(request: Request) {
   const verifier = jar.get('music_spotify_verifier')?.value;
   const state = url.searchParams.get('state');
   const code = url.searchParams.get('code');
+  // Backing out at Spotify comes back here too. That is a choice, not a
+  // failure, so it should not be reported as a state mismatch.
+  if (url.searchParams.get('error')) {
+    return NextResponse.redirect(destination(request, 'connection_cancelled'));
+  }
   if (!code || !state || state !== expectedState || !verifier) {
     return NextResponse.redirect(destination(request, 'invalid_oauth_state'));
   }
@@ -40,7 +46,8 @@ export async function GET(request: Request) {
     body: new URLSearchParams({
       grant_type: 'authorization_code',
       code,
-      redirect_uri: new URL('/api/music/callback/spotify', request.url).toString(),
+      // Must be the byte-identical URI sent to /authorize, hence the same helper.
+      redirect_uri: canonicalUrl('/api/music/callback/spotify', request.url),
       code_verifier: verifier,
     }),
     cache: 'no-store',

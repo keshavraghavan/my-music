@@ -365,10 +365,10 @@ export class DemoRepository {
               )
             order by e.occurred_at desc limit 4`,
       ),
-      rows<{ provider: 'spotify' | 'apple' }>(
+      rows<{ provider: 'spotify' | 'apple'; reconnect_required: boolean }>(
         this.database,
-        sql`select provider from service_connections
-            where user_id = ${viewerId} and reconnect_required = false`,
+        sql`select provider, reconnect_required from service_connections
+            where user_id = ${viewerId}`,
       ),
       rows<{
         title: string;
@@ -458,10 +458,22 @@ export class DemoRepository {
         (moduleRows.find((row) => row.module_key === key)?.span ?? 1) > 1,
       ]),
     ) as Record<ModuleKey, boolean>;
+    const isHealthy = (provider: 'spotify' | 'apple') =>
+      connectionRows.some((row) => row.provider === provider && !row.reconnect_required);
+    const isStale = (provider: 'spotify' | 'apple') =>
+      connectionRows.some((row) => row.provider === provider && row.reconnect_required);
+    // A stale connection is deliberately not "connected" — but it also does not
+    // hand the page back to the mock provider, which is why `mock` counts rows
+    // rather than healthy ones.
     const connected = {
       mock: connectionRows.length === 0,
-      spotify: connectionRows.some((row) => row.provider === 'spotify'),
-      apple: connectionRows.some((row) => row.provider === 'apple'),
+      spotify: isHealthy('spotify'),
+      apple: isHealthy('apple'),
+    };
+    const needsReconnect = {
+      mock: false,
+      spotify: isStale('spotify'),
+      apple: isStale('apple'),
     };
     const latestPlay = nowPlayingRows[0];
     const nowPlaying = latestPlay
@@ -576,6 +588,7 @@ export class DemoRepository {
         : 'comfortable') as Spacing,
       monthlyTracks,
       connected,
+      needsReconnect,
       nowPlayingSource:
         prefs?.now_playing_source === 'apple' ? 'apple' : connected.spotify ? 'spotify' : 'mock',
       isPrivateProfile: profile.is_private,
@@ -667,6 +680,7 @@ export function fallbackSnapshot(): AppState {
       { id: 'mt5', title: 'Last Train Home', artist: 'Wilder Sun' },
     ],
     connected: { mock: true, spotify: false, apple: false },
+    needsReconnect: { mock: false, spotify: false, apple: false },
     nowPlayingSource: 'mock',
     isPrivateProfile: false,
     relations: {
