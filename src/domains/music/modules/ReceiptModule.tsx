@@ -12,7 +12,7 @@ const DASHES = '-'.repeat(38);
 
 export function ReceiptModule() {
   const { connected, me, receiptLines: lines, receiptMeta } = useAppState();
-  const noService = !connected.spotify && !connected.apple;
+  const noService = !connected.mock && !connected.spotify && !connected.apple;
 
   return (
     <ModuleCard

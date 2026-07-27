@@ -394,13 +394,20 @@ persisted with an operator email alert, page-layout persistence. Optimistic UI
 with rollback; loading/error/empty states everywhere.
 **Ships:** every button does what it claims.
 
-### Phase 6 — Music integrations
+### Phase 6 — Music integrations ✅ _done_
 
 `MusicProvider` interface + `mock` (default) + real Spotify (OAuth/PKCE,
 encrypted tokens, refresh rotation, 401 → reconnect state). Play ingestion,
 chart computation with rank deltas, monthly receipt aggregation, real catalog
 search, connect-time backfill. Apple Music stub documented as
 "bring your own developer account."
+
+Provider authorization is deliberately separate from identity sign-in. The
+Spotify listening connection uses PKCE, encrypted access/refresh tokens, narrow
+playback/history scopes, bounded backfill and idempotent ingestion. The mock
+adapter remains the zero-config fallback, including paginated catalog search
+and deterministic play history. Apple Music implements the same seam but stays
+unavailable until a fork supplies its MusicKit developer and user tokens.
 **Ships:** real listening data drives the page.
 
 ### Phase 7 — Realtime, polish, template docs

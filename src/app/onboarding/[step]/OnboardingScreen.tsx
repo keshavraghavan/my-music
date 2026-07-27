@@ -80,7 +80,7 @@ export function OnboardingScreen({ step }: { step: number }) {
   );
   const handleTaken = locallyTaken || (ob.handle.length >= 3 && handleAvailable === false);
   const blocked = step === 3 && handleTaken;
-  const noServiceConnected = !connected.spotify && !connected.apple;
+  const noServiceConnected = !connected.mock && !connected.spotify && !connected.apple;
 
   async function goNext() {
     if (blocked) return;

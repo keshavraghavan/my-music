@@ -29,6 +29,7 @@ import {
 } from '@/domains/music/data/listening';
 import { isHandleTaken, ME, PEOPLE } from '@/domains/music/data/people';
 import { filterTracks, TRACK_POOL } from '@/domains/music/data/tracks';
+import { disconnectMusicService } from '@/domains/music/actions';
 import type {
   AppState,
   ChartTab,
@@ -82,8 +83,8 @@ export const INITIAL_STATE: AppState = {
     { id: 'mt5', title: 'Last Train Home', artist: 'Wilder Sun' },
   ],
 
-  connected: { spotify: false, apple: false },
-  nowPlayingSource: 'spotify',
+  connected: { mock: true, spotify: false, apple: false },
+  nowPlayingSource: 'mock',
   isPrivateProfile: false,
 
   relations: { theok: 'friend', marisolv: 'friend', priyad: 'friend', devonp: 'friend', irisn: 'friend', cassr: 'friend', samo: 'none', wrenl: 'none' },
@@ -125,6 +126,7 @@ export const INITIAL_STATE: AppState = {
 };
 
 const SERVICE_NAMES: Record<ServiceKey, ServiceName> = {
+  mock: 'Demo Library',
   spotify: 'Spotify',
   apple: 'Apple Music',
 };
@@ -585,20 +587,34 @@ export function AppStateProvider({
         showToast(`Posted to ${recipient}'s wall.`);
       },
 
-      connectService: (service) =>
-        setState((s) => ({ ...s, connected: { ...s.connected, [service]: true } })),
+      connectService: (service) => {
+        if (service === 'mock') return;
+        if (service === 'spotify') {
+          // Optimistic so the control responds immediately; a full navigation
+          // starts the PKCE flow and the server snapshot becomes authoritative.
+          setState((state) => ({
+            ...state,
+            connected: { ...state.connected, spotify: true },
+          }));
+          window.location.assign('/api/music/connect/spotify');
+          return;
+        }
+        showToast('Apple Music requires your own Apple Developer account.');
+      },
       askDisconnect: (service) =>
-        setState((s) => ({
-          ...s,
-          confirm: {
-            open: true,
-            kind: service === 'spotify' ? 'disconnect-spotify' : 'disconnect-apple',
-            title: `Disconnect ${SERVICE_NAMES[service]}?`,
-            message: 'Now Playing and charts pause for this service until you reconnect.',
-            confirmLabel: 'DISCONNECT',
-            payload: service,
-          },
-        })),
+        service === 'mock'
+          ? undefined
+          : setState((s) => ({
+              ...s,
+              confirm: {
+                open: true,
+                kind: service === 'spotify' ? 'disconnect-spotify' : 'disconnect-apple',
+                title: `Disconnect ${SERVICE_NAMES[service]}?`,
+                message: 'Now Playing and charts pause for this service until you reconnect.',
+                confirmLabel: 'DISCONNECT',
+                payload: service,
+              },
+            })),
       togglePrivate: () => setState((s) => ({ ...s, isPrivateProfile: !s.isPrivateProfile })),
       setAccountField: (field, value) =>
         setState((s) => ({ ...s, accountForm: { ...s.accountForm, [field]: value } })),
@@ -695,11 +711,15 @@ export function AppStateProvider({
             break;
           case 'disconnect-spotify':
             setState((s) => ({ ...s, connected: { ...s.connected, spotify: false } }));
-            showToast('Spotify disconnected.');
+            void disconnectMusicService('spotify').then((result) =>
+              showToast(result.ok ? 'Spotify disconnected.' : result.error),
+            );
             break;
           case 'disconnect-apple':
             setState((s) => ({ ...s, connected: { ...s.connected, apple: false } }));
-            showToast('Apple Music disconnected.');
+            void disconnectMusicService('apple').then((result) =>
+              showToast(result.ok ? 'Apple Music disconnected.' : result.error),
+            );
             break;
           case 'delete-account':
           case '':

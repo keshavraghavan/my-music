@@ -1,10 +1,11 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Button, Field, Modal } from '@/core/ui';
 import sx from '@/sx';
 import { useAppActions, useAppState } from '@/state/client-store';
 import { filterTracks } from '../data/tracks';
+import type { Track } from '@/types';
 
 const TITLES = {
   monthlyPick: 'Add to Your Top 10',
@@ -25,7 +26,44 @@ export function ComposeModal() {
   const { compose, playlistTracks, playlistName, people, catalog } = useAppState();
   const actions = useAppActions();
 
-  const results = filterTracks(compose.query, catalog);
+  const [providerResults, setProviderResults] = useState<{
+    query: string;
+    items: Track[];
+  } | null>(null);
+  const [searchError, setSearchError] = useState(false);
+  const hasQuery = compose.query.trim().length > 0;
+  const results = hasQuery
+    ? providerResults?.query === compose.query
+      ? providerResults.items
+      : filterTracks(compose.query, catalog)
+    : filterTracks('', catalog);
+
+  useEffect(() => {
+    if (!compose.query.trim()) return;
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => {
+      void fetch(`/api/music/search?q=${encodeURIComponent(compose.query)}`, {
+        signal: controller.signal,
+      })
+        .then(async (response) => {
+          if (!response.ok) throw new Error('Search failed');
+          const data = (await response.json()) as {
+            items: { title: string; artist: string }[];
+          };
+          setProviderResults({ query: compose.query, items: data.items });
+          setSearchError(false);
+        })
+        .catch((error: unknown) => {
+          if (error instanceof DOMException && error.name === 'AbortError') return;
+          setSearchError(true);
+        });
+    }, 250);
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [compose.query]);
+
   const selected = compose.selectedIdx == null ? null : results[compose.selectedIdx];
   const duplicate = selected
     ? playlistTracks.find((t) => t.title.toLowerCase() === selected.title.toLowerCase())
@@ -97,7 +135,17 @@ export function ComposeModal() {
               </span>
             </Button>
           ))}
+          {results.length === 0 && (
+            <div style={sx("padding:18px;text-align:center;font:500 11px 'Arimo';color:#6b6156")}>
+              NO TRACKS FOUND
+            </div>
+          )}
         </div>
+        {hasQuery && searchError && (
+          <div role="status" style={sx("font:500 10.5px 'Arimo';color:#B7472A")}>
+            Live catalog search is unavailable; showing the local catalog.
+          </div>
+        )}
 
         {compose.mode === 'recommend' && (
           <>

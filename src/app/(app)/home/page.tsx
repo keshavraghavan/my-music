@@ -13,7 +13,7 @@ export default function HomePage() {
   const { connected, isPrivateProfile, relations, editMode, me } = useAppState();
   const actions = useAppActions();
 
-  const noService = !connected.spotify && !connected.apple;
+  const noService = !connected.mock && !connected.spotify && !connected.apple;
   const friendCount = (Object.keys(relations) as PersonId[]).filter(
     (id) => relations[id] === 'friend',
   ).length;

@@ -31,6 +31,7 @@ describe('OAuth token encryption', () => {
   it('rejects tampered ciphertext', () => {
     process.env.TOKEN_ENCRYPTION_KEY = '11'.repeat(32);
     const encrypted = encryptToken('secret');
-    expect(() => decryptToken(`${encrypted.slice(0, -1)}x`)).toThrow();
+    const replacement = encrypted.endsWith('x') ? 'y' : 'x';
+    expect(() => decryptToken(`${encrypted.slice(0, -1)}${replacement}`)).toThrow();
   });
 });

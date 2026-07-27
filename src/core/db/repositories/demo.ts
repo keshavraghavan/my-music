@@ -151,6 +151,7 @@ export class DemoRepository {
       activityRows,
       connectionRows,
       nowPlayingRows,
+      receiptRows,
     ] = await Promise.all([
       rows<{
         display_name: string;
@@ -214,19 +215,33 @@ export class DemoRepository {
         sql`select t.title, a.name as artist from tracks t
             join artists a on a.id = t.artist_id order by t.id`,
       ),
-      rows<{ title: string; artist: string }>(
+      rows<{ title: string; artist: string; movement: number | null }>(
         this.database,
-        sql`select t.title, a.name as artist from chart_snapshots c
+        sql`select t.title, a.name as artist,
+              case when c.prev_rank is null then null else c.prev_rank - c.rank end as movement
+            from chart_snapshots c
             join tracks t on t.id = c.track_id join artists a on a.id = t.artist_id
-            where c.user_id = ${viewerId} and c.item_type = 'track'
-            order by c.captured_at desc, c.rank limit 8`,
+            where c.user_id = ${viewerId} and c.item_type = 'track' and c.period = '30d'
+              and c.captured_at = (
+                select max(latest.captured_at) from chart_snapshots latest
+                where latest.user_id = c.user_id and latest.item_type = c.item_type
+                  and latest.period = c.period
+              )
+            order by c.rank limit 8`,
       ),
-      rows<{ title: string; artist: string }>(
+      rows<{ title: string; artist: string; movement: number | null }>(
         this.database,
-        sql`select al.title, a.name as artist from chart_snapshots c
+        sql`select al.title, a.name as artist,
+              case when c.prev_rank is null then null else c.prev_rank - c.rank end as movement
+            from chart_snapshots c
             join albums al on al.id = c.album_id join artists a on a.id = al.artist_id
-            where c.user_id = ${viewerId} and c.item_type = 'album'
-            order by c.captured_at desc, c.rank limit 6`,
+            where c.user_id = ${viewerId} and c.item_type = 'album' and c.period = '30d'
+              and c.captured_at = (
+                select max(latest.captured_at) from chart_snapshots latest
+                where latest.user_id = c.user_id and latest.item_type = c.item_type
+                  and latest.period = c.period
+              )
+            order by c.rank limit 6`,
       ),
       rows<{ id: string; title: string; artist: string }>(
         this.database,
@@ -341,7 +356,8 @@ export class DemoRepository {
       ),
       rows<{ provider: 'spotify' | 'apple' }>(
         this.database,
-        sql`select provider from service_connections where user_id = ${viewerId}`,
+        sql`select provider from service_connections
+            where user_id = ${viewerId} and reconnect_required = false`,
       ),
       rows<{
         title: string;
@@ -357,6 +373,19 @@ export class DemoRepository {
             from plays p join tracks t on t.id = p.track_id
             join artists a on a.id = t.artist_id left join albums al on al.id = t.album_id
             where p.user_id = ${viewerId} order by p.played_at desc limit 1`,
+      ),
+      rows<{ title: string; artist: string; total_ms: number }>(
+        this.database,
+        sql`select t.title, a.name as artist, sum(p.ms_played)::int as total_ms
+            from plays p join tracks t on t.id = p.track_id
+            join artists a on a.id = t.artist_id
+            join profiles profile on profile.user_id = p.user_id
+            where p.user_id = ${viewerId}
+              and to_char(p.played_at at time zone profile.timezone, 'YYYY-MM')
+                = to_char(current_timestamp at time zone profile.timezone, 'YYYY-MM')
+            group by t.id, t.title, a.name
+            order by sum(p.ms_played) desc, count(*) desc, t.title
+            limit 5`,
       ),
     ]);
 
@@ -418,6 +447,7 @@ export class DemoRepository {
       ]),
     ) as Record<ModuleKey, boolean>;
     const connected = {
+      mock: connectionRows.length === 0,
       spotify: connectionRows.some((row) => row.provider === 'spotify'),
       apple: connectionRows.some((row) => row.provider === 'apple'),
     };
@@ -438,6 +468,13 @@ export class DemoRepository {
     const topSongs: Track[] = songRows.length ? songRows : TOP_SONGS;
     const topAlbums: Track[] = albumRows.length ? albumRows : TOP_ALBUMS;
     const monthlyTracks: MonthlyTrack[] = monthlyRows;
+    const totalReceiptMs = receiptRows.reduce((total, row) => total + row.total_ms, 0);
+    const receiptLines = receiptRows.map((row, index) => ({
+      title: row.title,
+      artist: row.artist,
+      stop: String(index + 1).padStart(2, '0'),
+      mins: `${Math.round(row.total_ms / 60_000)}m`,
+    }));
     const recs: Rec[] = recommendationRows.flatMap((row) =>
       peopleById[row.sender_id]
         ? [
@@ -503,12 +540,15 @@ export class DemoRepository {
       topSongs,
       topAlbums,
       nowPlaying,
-      receiptMeta: RECEIPT_META,
-      receiptLines: topSongs.slice(0, 5).map((track, index) => ({
-        ...track,
-        stop: `0${index + 1}`,
-        mins: `${14 - index * 2}m`,
-      })),
+      receiptMeta: receiptRows.length
+        ? {
+            ...RECEIPT_META,
+            totalRideTime: `${Math.floor(totalReceiptMs / 3_600_000)}H ${Math.round(
+              (totalReceiptMs % 3_600_000) / 60_000,
+            )}M`,
+          }
+        : RECEIPT_META,
+      receiptLines: receiptLines.length ? receiptLines : monthlyReceipt(),
       feedItems: feedItems.length ? feedItems : FEED_ITEMS,
       playlistName: playlistRows[0]?.name ?? PLAYLIST_NAME,
       ob: { name: profile.display_name, handle: profile.handle, bio: profile.bio },
@@ -523,7 +563,8 @@ export class DemoRepository {
         : 'comfortable') as Spacing,
       monthlyTracks,
       connected,
-      nowPlayingSource: prefs?.now_playing_source === 'apple' ? 'apple' : 'spotify',
+      nowPlayingSource:
+        prefs?.now_playing_source === 'apple' ? 'apple' : connected.spotify ? 'spotify' : 'mock',
       isPrivateProfile: profile.is_private,
       relations,
       incomingFollowRequests,
@@ -611,8 +652,8 @@ export function fallbackSnapshot(): AppState {
       { id: 'mt4', title: 'Terracotta', artist: 'Coral June' },
       { id: 'mt5', title: 'Last Train Home', artist: 'Wilder Sun' },
     ],
-    connected: { spotify: false, apple: false },
-    nowPlayingSource: 'spotify',
+    connected: { mock: true, spotify: false, apple: false },
+    nowPlayingSource: 'mock',
     isPrivateProfile: false,
     relations: {
       theok: 'friend',

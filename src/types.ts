@@ -18,8 +18,8 @@ export type PersonId =
 export type AuthorId = PersonId | 'me';
 
 export type Relation = 'none' | 'requested' | 'friend' | 'blocked';
-export type ServiceKey = 'spotify' | 'apple';
-export type ServiceName = 'Spotify' | 'Apple Music';
+export type ServiceKey = 'mock' | 'spotify' | 'apple';
+export type ServiceName = 'Demo Library' | 'Spotify' | 'Apple Music';
 export type Spacing = 'compact' | 'comfortable' | 'spacious';
 export type SettingsTab = 'account' | 'services' | 'privacy' | 'notifs';
 export type ChartTab = 'songs' | 'albums';
@@ -63,6 +63,7 @@ export interface ViewerProfile {
 export interface Track {
   title: string;
   artist: string;
+  movement?: number | null;
 }
 
 export interface NowPlaying {
