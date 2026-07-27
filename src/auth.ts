@@ -1,6 +1,7 @@
 import { DrizzleAdapter } from '@auth/drizzle-adapter';
 import NextAuth from 'next-auth';
 import Spotify from 'next-auth/providers/spotify';
+import { authAdapterSchema } from '@/core/auth/adapter-schema';
 import { getDatabase } from '@/core/db/client';
 import { createInitialProfile } from '@/core/auth/profile';
 import { magicLinkProvider } from '@/core/auth/email-provider';
@@ -27,7 +28,11 @@ if (process.env.SPOTIFY_CLIENT_ID && process.env.SPOTIFY_CLIENT_SECRET) {
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  ...(database ? { adapter: withEncryptedOAuthTokens(DrizzleAdapter(database)) } : {}),
+  ...(database
+    ? {
+        adapter: withEncryptedOAuthTokens(DrizzleAdapter(database, authAdapterSchema)),
+      }
+    : {}),
   providers,
   pages: { signIn: '/login', verifyRequest: '/login/check-email' },
   session: { strategy: database ? 'database' : 'jwt' },
