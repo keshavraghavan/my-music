@@ -145,6 +145,7 @@ export const notifications = pgTable(
     objectType: text('object_type'),
     objectId: text('object_id'),
     readAt: timestamp('read_at', { withTimezone: true }),
+    digestSentAt: timestamp('digest_sent_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [index('notifications_user_time_idx').on(table.userId, table.createdAt)],

@@ -3,20 +3,24 @@ import type { ReactNode } from 'react';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'MyMusic.',
+  metadataBase: new URL(process.env.AUTH_URL ?? 'http://localhost:3000'),
+  title: { default: 'MyMusic.', template: '%s | MyMusic.' },
   description:
     "MyMusic — your page, your charts, your friends' picks. A retro music-social platform.",
   icons: { icon: '/favicon.svg' },
+  openGraph: {
+    type: 'website',
+    siteName: 'MyMusic.',
+    title: 'MyMusic.',
+    description: "Your page, your charts, your friends' picks.",
+  },
+  twitter: { card: 'summary_large_image' },
 };
 
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
 };
-
-// The initial snapshot is a live repository read when DATABASE_URL is set.
-// Prevent Next from freezing it into the build output.
-export const dynamic = 'force-dynamic';
 
 // Fonts stay on the Google Fonts stylesheet rather than next/font: the design's
 // inline styles name the families literally ('Tinos', 'JetBrains Mono',

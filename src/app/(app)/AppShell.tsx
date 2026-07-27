@@ -8,6 +8,7 @@ import { deleteMyAccount } from '@/core/account/actions';
 import { Avatar, ConfirmDialog, TextLink, Toast, cx } from '@/core/ui';
 import { ComposeModal } from '@/domains/music/compose/ComposeModal';
 import { useAppActions, useAppState } from '@/state/client-store';
+import type { AppNotification, NowPlaying } from '@/types';
 import styles from './shell.module.css';
 
 // `match` is the URL prefix the tab owns; `href` is where clicking it lands.
@@ -43,6 +44,21 @@ export function AppShell({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (pathname !== routes.home) actions.setEditMode(false);
   }, [pathname, actions]);
+
+  useEffect(() => {
+    if (typeof EventSource === 'undefined') return;
+    const events = new EventSource('/api/stream');
+    const notificationsListener = (event: MessageEvent<string>) => {
+      actions.receiveNotifications(JSON.parse(event.data) as AppNotification[]);
+    };
+    const nowPlayingListener = (event: MessageEvent<string>) => {
+      const value = JSON.parse(event.data) as NowPlaying | null;
+      if (value) actions.receiveNowPlaying(value);
+    };
+    events.addEventListener('notifications', notificationsListener);
+    events.addEventListener('now-playing', nowPlayingListener);
+    return () => events.close();
+  }, [actions]);
 
   function isCurrent(match: string) {
     if (match === routes.friends) return owns(match, pathname) || onProfile;
@@ -84,6 +100,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </nav>
           <Avatar
             initials={me.initials}
+            src={me.avatarUrl}
             size={30}
             css="font-family:'Tinos'"
             decorative={false}

@@ -64,3 +64,22 @@ export async function canUserViewProfile(
     isAcceptedFollower: follow?.status === 'accepted',
   });
 }
+
+/** Basic profile identity may render as a locked shell. Blocks still make the
+ * account undiscoverable; private content uses `canUserViewProfile` separately. */
+export async function canUserAccessProfileShell(viewerId: string | null, ownerId: string) {
+  if (viewerId === ownerId) return true;
+  const database = getDatabase();
+  if (!database || !viewerId) return true;
+  const [block] = await database
+    .select({ blockerId: blocks.blockerId })
+    .from(blocks)
+    .where(
+      or(
+        and(eq(blocks.blockerId, viewerId), eq(blocks.blockedId, ownerId)),
+        and(eq(blocks.blockerId, ownerId), eq(blocks.blockedId, viewerId)),
+      ),
+    )
+    .limit(1);
+  return !block;
+}

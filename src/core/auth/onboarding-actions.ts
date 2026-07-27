@@ -5,7 +5,7 @@ import { getDatabase } from '@/core/db/client';
 import { notificationPrefs, pageModules, profiles, userPrefs } from '@/core/db/schema';
 import type { ModuleKey, ProfileForm } from '@/types';
 import { initialsFor, isHandleAvailable, isValidHandle, normalizeHandle } from './profile';
-import { requireUser } from './session';
+import { isLocalE2E, requireUser } from './session';
 
 const MODULE_KEYS = [
   'feed',
@@ -18,6 +18,7 @@ const MODULE_KEYS = [
 ] satisfies ModuleKey[];
 
 export async function saveOnboardingProfile(profile: ProfileForm) {
+  if (isLocalE2E()) return;
   const user = await requireUser();
   const database = getDatabase();
   if (!database) throw new Error('Database configuration is required for onboarding');
@@ -40,6 +41,7 @@ export async function saveOnboardingProfile(profile: ProfileForm) {
 }
 
 export async function saveOnboardingModules(enabledKeys: ModuleKey[]) {
+  if (isLocalE2E()) return;
   const user = await requireUser();
   const database = getDatabase();
   if (!database) throw new Error('Database configuration is required for onboarding');
@@ -65,6 +67,7 @@ export async function saveOnboardingModules(enabledKeys: ModuleKey[]) {
 }
 
 export async function completeOnboarding() {
+  if (isLocalE2E()) return;
   const user = await requireUser();
   const database = getDatabase();
   if (!database) throw new Error('Database configuration is required for onboarding');

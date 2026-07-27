@@ -8,6 +8,9 @@ import { withEncryptedOAuthTokens } from '@/core/auth/encrypted-adapter';
 
 const database = getDatabase();
 const providers = [];
+const localE2E =
+  process.env.MYMUSIC_E2E === '1' &&
+  /^http:\/\/(127\.0\.0\.1|localhost):\d+$/.test(process.env.AUTH_URL ?? '');
 
 if (database) providers.push(magicLinkProvider());
 if (process.env.SPOTIFY_CLIENT_ID && process.env.SPOTIFY_CLIENT_SECRET) {
@@ -30,7 +33,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   providers,
   pages: { signIn: '/login', verifyRequest: '/login/check-email' },
   session: { strategy: database ? 'database' : 'jwt' },
-  trustHost: process.env.NODE_ENV !== 'production',
+  trustHost: process.env.NODE_ENV !== 'production' || localE2E,
   callbacks: {
     session({ session, user }) {
       if (session.user && user) session.user.id = user.id;

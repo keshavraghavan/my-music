@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
-import { authenticatedDestination } from '@/core/auth/session';
+import { authenticatedDestination, isLocalE2E } from '@/core/auth/session';
+import { routes } from '@/core/routes';
 import { TextLink } from '@/core/ui';
 import styles from './landing.module.css';
 
@@ -16,7 +17,11 @@ export function LandingScreen() {
       <div className={styles.card}>
         <h1 className={styles.wordmark}>MyMusic.</h1>
         <p className={styles.tagline}>YOUR PAGE ｜ YOUR CHARTS ｜ YOUR FRIENDS&apos; PICKS</p>
-        <TextLink variant="bare" href="/login" className={styles.cta}>
+        <TextLink
+          variant="bare"
+          href={isLocalE2E() ? routes.onboarding(1) : '/login'}
+          className={styles.cta}
+        >
           GET STARTED →
         </TextLink>
       </div>

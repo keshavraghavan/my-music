@@ -7,6 +7,19 @@
   margin-bottom: 22px;
 }
 
+.avatarEditor {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.avatarNote {
+  margin: 3px 0 8px;
+  color: var(--muted);
+  font: 400 11px var(--font-body);
+}
+
 .row {
   display: flex;
   align-items: center;

@@ -3,6 +3,7 @@
 import { routes } from '@/core/routes';
 import { Avatar, Button, Field, Page, SegmentedControl, SegmentedLink, Toggle } from '@/core/ui';
 import { isHandleTaken } from '@/domains/music/data/people';
+import { AvatarUpload } from '@/core/identity/AvatarUpload';
 import { useAppActions, useAppState } from '@/state/client-store';
 import type { NotifPrefKey, ServiceKey, SettingsTab } from '@/types';
 import styles from './settings.module.css';
@@ -23,6 +24,7 @@ const NOTIF_PREFS: { key: NotifPrefKey; label: string }[] = [
   { key: 'recs', label: 'New recommendations' },
   { key: 'friendActivity', label: 'Friend activity' },
   { key: 'chart', label: 'Chart updates' },
+  { key: 'emailDigest', label: 'Weekly email digest' },
 ];
 
 /** Settings, one tab per URL — so "send me the privacy tab" is a link. */
@@ -51,6 +53,21 @@ export function SettingsScreen({ tab }: { tab: SettingsTab }) {
 
       {tab === 'account' && (
         <>
+          <div className={styles.avatarEditor}>
+            <Avatar
+              initials={me.initials}
+              src={me.avatarUrl}
+              size={64}
+              color={me.color}
+              decorative={false}
+              aria-label={`${me.name}'s avatar`}
+            />
+            <div>
+              <div className={styles.rowTitle}>Profile photo</div>
+              <p className={styles.avatarNote}>JPEG, PNG, or WebP. Maximum 5 MB.</p>
+              <AvatarUpload />
+            </div>
+          </div>
           <Field
             label="NAME"
             value={accountForm.name}

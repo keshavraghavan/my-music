@@ -17,11 +17,17 @@ import { expect, test, type Page } from '@playwright/test';
 async function signIn(page: Page) {
   await page.goto('/');
   await page.getByRole('link', { name: 'GET STARTED →' }).click();
+  await expect(page).toHaveURL('/onboarding/1');
   await page.getByRole('button', { name: "LET'S GO →" }).click();
+  await expect(page).toHaveURL('/onboarding/2');
   await page.getByRole('button', { name: 'CONTINUE →' }).click();
+  await expect(page).toHaveURL('/onboarding/3');
   await page.getByRole('button', { name: 'CONTINUE →' }).click();
+  await expect(page).toHaveURL('/onboarding/4');
   await page.getByRole('button', { name: 'CONTINUE →' }).click();
+  await expect(page).toHaveURL('/onboarding/5');
   await page.getByRole('button', { name: 'ENTER YOUR PAGE →' }).click();
+  await expect(page).toHaveURL('/home');
 }
 
 test('the landing page renders before any interaction', async ({ page }) => {

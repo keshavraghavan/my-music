@@ -30,8 +30,15 @@ import {
 import { isHandleTaken, ME, PEOPLE } from '@/domains/music/data/people';
 import { filterTracks, TRACK_POOL } from '@/domains/music/data/tracks';
 import { disconnectMusicService } from '@/domains/music/actions';
+import {
+  markAllNotificationsRead,
+  markNotificationRead,
+  updateNotificationPreference,
+} from '@/core/notifications/actions';
+import { reportRecommendation } from '@/core/moderation/actions';
 import type {
   AppState,
+  AppNotification,
   ChartTab,
   ComposeTarget,
   ConfirmKind,
@@ -43,6 +50,7 @@ import type {
   ServiceKey,
   ServiceName,
   Spacing,
+  NowPlaying,
 } from '@/types';
 
 /*
@@ -122,7 +130,7 @@ export const INITIAL_STATE: AppState = {
   toast: null,
 
   accountForm: { name: ME.name, handle: ME.handle, bio: ME.bio },
-  notifPrefs: { recs: true, friendActivity: true, chart: false },
+  notifPrefs: { recs: true, friendActivity: true, chart: false, emailDigest: false },
 };
 
 const SERVICE_NAMES: Record<ServiceKey, ServiceName> = {
@@ -171,6 +179,8 @@ export interface AppActions {
   // notifications
   markAllRead: () => void;
   readNotification: (id: string) => void;
+  receiveNotifications: (notifications: AppNotification[]) => void;
+  receiveNowPlaying: (nowPlaying: NowPlaying) => void;
   toggleNotifPref: (key: NotifPrefKey) => void;
 
   // compose
@@ -427,18 +437,54 @@ export function AppStateProvider({
           },
         })),
 
-      markAllRead: () =>
+      markAllRead: () => {
         setState((s) => ({
           ...s,
           notifications: s.notifications.map((n) => ({ ...n, read: true })),
-        })),
-      readNotification: (id) =>
+        }));
+        void markAllNotificationsRead()
+          .then((result) => {
+            if (!result.ok) showToast(result.error);
+          })
+          .catch(() => showSaveError());
+      },
+      readNotification: (id) => {
         setState((s) => ({
           ...s,
           notifications: s.notifications.map((n) => (n.id === id ? { ...n, read: true } : n)),
-        })),
-      toggleNotifPref: (key) =>
-        setState((s) => ({ ...s, notifPrefs: { ...s.notifPrefs, [key]: !s.notifPrefs[key] } })),
+        }));
+        void markNotificationRead(id)
+          .then((result) => {
+            if (!result.ok) showToast(result.error);
+          })
+          .catch(() => showSaveError());
+      },
+      receiveNotifications: (notifications) => setState((state) => ({ ...state, notifications })),
+      receiveNowPlaying: (nowPlaying) => setState((state) => ({ ...state, nowPlaying })),
+      toggleNotifPref: (key) => {
+        const enabled = !latest.current.notifPrefs[key];
+        setState((state) => ({
+          ...state,
+          notifPrefs: { ...state.notifPrefs, [key]: enabled },
+        }));
+        void updateNotificationPreference(key, enabled)
+          .then((result) => {
+            if (!result.ok) {
+              setState((state) => ({
+                ...state,
+                notifPrefs: { ...state.notifPrefs, [key]: !enabled },
+              }));
+              showToast(result.error);
+            }
+          })
+          .catch(() => {
+            setState((state) => ({
+              ...state,
+              notifPrefs: { ...state.notifPrefs, [key]: !enabled },
+            }));
+            showSaveError();
+          });
+      },
 
       openComposeForFriend: (personId) =>
         setState((s) => ({
@@ -707,7 +753,31 @@ export function AppStateProvider({
                 r.id === payload ? { ...r, status: 'reported' as const } : r,
               ),
             }));
-            showToast("Reported. We'll take a look.");
+            if (payload) {
+              void reportRecommendation(payload)
+                .then((result) => {
+                  if (result.ok) {
+                    showToast("Reported. We'll take a look.");
+                  } else {
+                    setState((state) => ({
+                      ...state,
+                      recs: state.recs.map((rec) =>
+                        rec.id === payload ? { ...rec, status: 'active' as const } : rec,
+                      ),
+                    }));
+                    showToast(result.error);
+                  }
+                })
+                .catch(() => {
+                  setState((state) => ({
+                    ...state,
+                    recs: state.recs.map((rec) =>
+                      rec.id === payload ? { ...rec, status: 'active' as const } : rec,
+                    ),
+                  }));
+                  showSaveError();
+                });
+            }
             break;
           case 'disconnect-spotify':
             setState((s) => ({ ...s, connected: { ...s.connected, spotify: false } }));

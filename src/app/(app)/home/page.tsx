@@ -31,7 +31,12 @@ export default function HomePage() {
 
       <div className={styles.frame}>
         <div className={styles.profile}>
-          <Avatar initials={me.initials} size={76} css="font-family:'Tinos';font-size:26px" />
+          <Avatar
+            initials={me.initials}
+            src={me.avatarUrl}
+            size={76}
+            css="font-family:'Tinos';font-size:26px"
+          />
           <div className={styles.identity}>
             <h1 className={styles.name}>{me.name}</h1>
             <div className={styles.meta}>

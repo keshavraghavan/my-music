@@ -13,13 +13,15 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run",
+    "test:decisions": "vitest run tests/unit/product-decisions.test.ts tests/unit/phase7.test.ts tests/unit/graph-repository.test.ts tests/unit/authorization.test.ts",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:seed": "tsx src/core/db/seed.ts",
     "db:studio": "drizzle-kit studio",
-    "check": "npm run typecheck && npm run lint && npm run format:check && npm run test"
+    "check": "npm run typecheck && npm run lint && npm run format:check && npm run test",
+    "verify": "npm run check && npm run build"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.11.3",
