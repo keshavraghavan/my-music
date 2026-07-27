@@ -154,10 +154,11 @@ function LockedProfile({ person, requested }: { person: Person; requested: boole
               background: ${requested ? '#1E1B18' : 'transparent'};
               color: ${requested ? '#F2ECDF' : '#1E1B18'};
             `}
-            disabled={requested}
-            onClick={() => actions.requestFollow(person.id)}
+            onClick={() =>
+              requested ? actions.cancelFollowRequest(person.id) : actions.requestFollow(person.id)
+            }
           >
-            {requested ? 'REQUEST SENT' : 'REQUEST TO FOLLOW'}
+            {requested ? 'CANCEL REQUEST' : 'REQUEST TO FOLLOW'}
           </Button>
         </div>
       </div>

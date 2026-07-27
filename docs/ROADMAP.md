@@ -377,11 +377,13 @@ Account deletion cascades from the user row, and the token-safe JSON export
 covers core and music-domain data.
 **Ships:** multiple real users; privacy is real, not cosmetic.
 
-### Phase 5 — Core social workflows
+### Phase 5 — Core social workflows 🟡 _in progress_
 
-**Follow graph:** immediate follow for public profiles, request → accept/decline
-for private ones (closing the missing-acceptance gap), cancel, unfollow, plus
-the request inbox. Block enforcement end-to-end.
+**Follow graph:** ✅ immediate follow for public profiles, request →
+accept/decline for private ones (closing the missing-acceptance gap), cancel,
+unfollow, plus the request inbox. Blocking now removes both follow directions
+atomically and is enforced by the existing read policy; the blocked-account
+settings list and unblock action remain.
 **Playlists:** create with an invite-friends step, invite/accept/decline/revoke,
 leave, track add/reorder/remove gated on accepted membership, duplicate-add
 conflict keyed by user id.

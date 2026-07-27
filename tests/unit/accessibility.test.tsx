@@ -57,7 +57,7 @@ describe('keyboard operability', () => {
 
     const trigger = screen.getByRole('button', { name: 'Options for Theo K.' });
     await user.click(trigger);
-    expect(screen.getByRole('menuitem', { name: 'REMOVE FRIEND' })).toHaveFocus();
+    expect(screen.getByRole('menuitem', { name: 'UNFOLLOW' })).toHaveFocus();
 
     await user.keyboard('{ArrowDown}');
     expect(screen.getByRole('menuitem', { name: 'BLOCK' })).toHaveFocus();

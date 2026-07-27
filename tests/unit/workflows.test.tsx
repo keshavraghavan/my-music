@@ -1,6 +1,8 @@
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import { followUser } from '@/core/graph/actions';
+import { INITIAL_STATE } from '@/state/client-store';
 import { renderApp } from './app';
 
 /**
@@ -21,6 +23,19 @@ describe('friends', () => {
     expect(screen.getByRole('heading', { name: 'MY FRIENDS ｜ 7' })).toBeInTheDocument();
   });
 
+  it('rolls an optimistic follow back when the server action fails', async () => {
+    vi.mocked(followUser).mockRejectedValueOnce(new Error('network unavailable'));
+    const user = userEvent.setup();
+    renderApp('/friends');
+
+    await user.click(screen.getByRole('button', { name: 'Add Wren L.' }));
+
+    expect(await screen.findByRole('button', { name: 'Add Wren L.' })).toBeInTheDocument();
+    expect(
+      screen.getByText('That change could not be saved. Please try again.'),
+    ).toBeInTheDocument();
+  });
+
   it('offers a follow request rather than an add for a private account', async () => {
     const user = userEvent.setup();
     renderApp('/friends');
@@ -28,7 +43,10 @@ describe('friends', () => {
     expect(screen.queryByRole('button', { name: 'Add Sam O.' })).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Request to follow Sam O.' }));
-    expect(screen.getByRole('button', { name: 'Follow request sent to Sam O.' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Cancel follow request to Sam O.' })).toBeEnabled();
+
+    await user.click(screen.getByRole('button', { name: 'Cancel follow request to Sam O.' }));
+    expect(screen.getByRole('button', { name: 'Request to follow Sam O.' })).toBeEnabled();
   });
 
   it('removes a friend only after the confirmation is accepted', async () => {
@@ -36,14 +54,14 @@ describe('friends', () => {
     renderApp('/friends');
 
     await user.click(screen.getByRole('button', { name: 'Options for Theo K.' }));
-    await user.click(screen.getByRole('menuitem', { name: 'REMOVE FRIEND' }));
+    await user.click(screen.getByRole('menuitem', { name: 'UNFOLLOW' }));
 
     // The dialog is up; nothing has changed yet.
-    const dialog = screen.getByRole('dialog', { name: 'Remove friend?' });
-    expect(screen.queryByText('Removed Theo K. as a friend.')).not.toBeInTheDocument();
+    const dialog = screen.getByRole('dialog', { name: 'Unfollow this person?' });
+    expect(screen.queryByText('Unfollowed Theo K.')).not.toBeInTheDocument();
 
-    await user.click(within(dialog).getByRole('button', { name: 'REMOVE' }));
-    expect(screen.getByText('Removed Theo K. as a friend.')).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: 'UNFOLLOW' }));
+    expect(screen.getByText('Unfollowed Theo K.')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'MY FRIENDS ｜ 5' })).toBeInTheDocument();
   });
 
@@ -52,7 +70,7 @@ describe('friends', () => {
     renderApp('/friends');
 
     await user.click(screen.getByRole('button', { name: 'Options for Theo K.' }));
-    await user.click(screen.getByRole('menuitem', { name: 'REMOVE FRIEND' }));
+    await user.click(screen.getByRole('menuitem', { name: 'UNFOLLOW' }));
     await user.click(screen.getByRole('button', { name: 'CANCEL' }));
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
@@ -71,6 +89,20 @@ describe('friends', () => {
 
     expect(screen.getByText('Blocked Marisol V.')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'MY FRIENDS ｜ 5' })).toBeInTheDocument();
+  });
+
+  it('accepts an incoming follow request from the request inbox', async () => {
+    const user = userEvent.setup();
+    renderApp('/friends', {
+      ...INITIAL_STATE,
+      incomingFollowRequests: [INITIAL_STATE.people.samo],
+    });
+
+    expect(screen.getByRole('heading', { name: 'FOLLOW REQUESTS ｜ 1' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Accept follow request from Sam O.' }));
+
+    expect(screen.queryByRole('heading', { name: /FOLLOW REQUESTS/ })).not.toBeInTheDocument();
+    expect(screen.getByText("Accepted Sam O.'s follow request.")).toBeInTheDocument();
   });
 });
 

@@ -134,6 +134,7 @@ export class DemoRepository {
       profileRows,
       peopleList,
       followRows,
+      incomingFollowRows,
       blockRows,
       moduleRows,
       prefRows,
@@ -168,6 +169,27 @@ export class DemoRepository {
       rows<{ followee_id: string; status: 'pending' | 'accepted' }>(
         this.database,
         sql`select followee_id, status from follows where follower_id = ${viewerId}`,
+      ),
+      rows<{
+        id: string;
+        display_name: string;
+        handle: string;
+        initials: string;
+        color: string;
+        city: string;
+        is_private: boolean;
+      }>(
+        this.database,
+        sql`select p.user_id as id, p.display_name, p.handle, p.initials, p.color, p.city,
+              p.is_private
+            from follows f join profiles p on p.user_id = f.follower_id
+            where f.followee_id = ${viewerId} and f.status = 'pending'
+              and not exists (
+                select 1 from blocks b
+                where (b.blocker_id = ${viewerId} and b.blocked_id = f.follower_id)
+                   or (b.blocker_id = f.follower_id and b.blocked_id = ${viewerId})
+              )
+            order by f.created_at`,
       ),
       rows<{ blocked_id: string }>(
         this.database,
@@ -346,6 +368,16 @@ export class DemoRepository {
       Person
     >;
     const peopleById = people as unknown as Record<string, Person | undefined>;
+    const incomingFollowRequests: Person[] = incomingFollowRows.map((row) => ({
+      id: row.id as PersonId,
+      name: row.display_name,
+      handle: row.handle,
+      initials: row.initials,
+      color: row.color,
+      service: isSeedPersonId(row.id) ? PEOPLE[row.id].service : 'MyMusic',
+      city: row.city,
+      private: row.is_private,
+    }));
     const relations = Object.fromEntries(peopleList.map((person) => [person.id, 'none'])) as Record<
       PersonId,
       Relation
@@ -494,6 +526,7 @@ export class DemoRepository {
       nowPlayingSource: prefs?.now_playing_source === 'apple' ? 'apple' : 'spotify',
       isPrivateProfile: profile.is_private,
       relations,
+      incomingFollowRequests,
       friendSearch: '',
       openFriendMenu: null,
       recs,
@@ -591,6 +624,7 @@ export function fallbackSnapshot(): AppState {
       samo: 'none',
       wrenl: 'none',
     },
+    incomingFollowRequests: [],
     friendSearch: '',
     openFriendMenu: null,
     recs: [
