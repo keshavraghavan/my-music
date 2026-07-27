@@ -5,12 +5,10 @@ import { getDatabase } from '@/core/db/client';
 import { createInitialProfile } from '@/core/auth/profile';
 import { magicLinkProvider } from '@/core/auth/email-provider';
 import { withEncryptedOAuthTokens } from '@/core/auth/encrypted-adapter';
+import { shouldTrustAuthHost } from '@/core/auth/trusted-host';
 
 const database = getDatabase();
 const providers = [];
-const localE2E =
-  process.env.MYMUSIC_E2E === '1' &&
-  /^http:\/\/(127\.0\.0\.1|localhost):\d+$/.test(process.env.AUTH_URL ?? '');
 
 if (database) providers.push(magicLinkProvider());
 if (process.env.SPOTIFY_CLIENT_ID && process.env.SPOTIFY_CLIENT_SECRET) {
@@ -33,7 +31,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   providers,
   pages: { signIn: '/login', verifyRequest: '/login/check-email' },
   session: { strategy: database ? 'database' : 'jwt' },
-  trustHost: process.env.NODE_ENV !== 'production' || localE2E,
+  trustHost: shouldTrustAuthHost({
+    nodeEnv: process.env.NODE_ENV,
+    authTrustHost: process.env.AUTH_TRUST_HOST,
+    authUrl: process.env.AUTH_URL,
+    e2e: process.env.MYMUSIC_E2E,
+  }),
   callbacks: {
     session({ session, user }) {
       if (session.user && user) session.user.id = user.id;
