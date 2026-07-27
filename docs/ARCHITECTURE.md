@@ -22,8 +22,8 @@ workflow.
 2. Server Components load a read model through `core/db`.
 3. Client actions optimistically update the interface and invoke Server Actions.
 4. Domain events create persisted notifications.
-5. `/api/stream` publishes notifications and Now Playing over one authenticated
-   SSE connection.
+5. `/api/poll` publishes notification and Now Playing snapshots. The client
+   refreshes immediately on focus and once per minute while the tab is visible.
 
 Drizzle schema is split between `core/db/schema/core.ts` and
 `domains/music/db/schema/music.ts`. `core/graph/authorization.ts` is the policy

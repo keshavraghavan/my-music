@@ -132,7 +132,7 @@ scope of "fully functional."
 | Actionable rows           | None — rows only navigate                              | Follow requests and playlist invites carry accept/decline inline                                                                                                       |
 | Preferences               | `notifPrefs` booleans, unused                          | Respected at emit time                                                                                                                                                 |
 | Email / push delivery     | Missing                                                | Email digest via Resend; **operator alert on new report**; web push optional                                                                                           |
-| Realtime arrival          | Missing                                                | SSE channel per user                                                                                                                                                   |
+| Realtime arrival          | Missing                                                | Visibility-aware short polling per user                                                                                                                                |
 
 ### G. Cross-cutting gaps
 
@@ -169,7 +169,7 @@ src/
     (app)/settings/[tab]/page.tsx     # ✅
     onboarding/[step]/page.tsx        # ✅
     api/auth/[...nextauth]/route.ts
-    api/webhooks/…, api/stream/route.ts   # SSE
+    api/webhooks/…, api/poll/route.ts     # bounded realtime snapshots
 
   core/                       # ← domain-agnostic. The template.
     auth/                     # Auth.js config, session helpers, requireUser()
@@ -412,18 +412,19 @@ unavailable until a fork supplies its MusicKit developer and user tokens.
 
 ### Phase 7 — Realtime, polish, template docs ✅ _done_
 
-SSE for notifications and Now Playing · avatar upload (presigned) · email
+Visibility-aware polling for notifications and Now Playing · avatar upload (presigned) · email
 digests · OG images and shareable profile URLs · perf pass · `docs/`:
 architecture, "fork this into your own social site", writing a module, writing
 a provider, deploy guide (Vercel + Neon/Supabase Postgres) · one-click deploy
 button.
 
-One authenticated SSE connection reconciles notification and Now Playing
-snapshots. Avatar uploads use short-lived S3/R2-compatible signed PUTs with
-account-path validation; email digests are idempotent and scheduled behind a
-cron secret. Profiles publish canonical metadata and generated OG cards. The
-template guides and an explicit product-decision test command now live in-repo.
-**Ships:** a template someone else can actually use.
+One authenticated snapshot request reconciles notifications and Now Playing
+immediately on focus and once per minute while visible. Avatar uploads use
+short-lived S3/R2-compatible signed PUTs with account-path validation; email
+digests are idempotent and scheduled behind a cron secret. Profiles publish
+canonical metadata and generated OG cards. The template guides and an explicit
+product-decision test command now live in-repo. **Ships:** a template someone
+else can actually use.
 
 ---
 

@@ -11,6 +11,10 @@ declare global {
   var myMusicSqlClient: ReturnType<typeof postgres> | undefined;
 }
 
+export function databasePoolSize(nodeEnv: string | undefined) {
+  return nodeEnv === 'production' ? 1 : 10;
+}
+
 /**
  * Returns the shared database client, or `null` when DATABASE_URL is absent.
  *
@@ -22,12 +26,15 @@ export function getDatabase(): Database | null {
   if (!process.env.DATABASE_URL) return null;
   if (globalThis.myMusicDatabase) return globalThis.myMusicDatabase;
 
-  const client = postgres(process.env.DATABASE_URL, { max: 10 });
+  // A Fluid Compute instance can serve many requests over its lifetime. Keep
+  // one client per instance so repeated calls do not accumulate connection
+  // pools, and let the external serverless pooler multiplex production work.
+  const client = postgres(process.env.DATABASE_URL, {
+    max: databasePoolSize(process.env.NODE_ENV),
+  });
   const database = drizzle(client, { schema });
 
-  if (process.env.NODE_ENV !== 'production') {
-    globalThis.myMusicSqlClient = client;
-    globalThis.myMusicDatabase = database;
-  }
+  globalThis.myMusicSqlClient = client;
+  globalThis.myMusicDatabase = database;
   return database;
 }

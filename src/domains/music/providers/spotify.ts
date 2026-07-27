@@ -10,6 +10,7 @@ import { MusicProviderAuthError } from './types';
 
 const API = 'https://api.spotify.com/v1';
 const TOKEN_URL = 'https://accounts.spotify.com/api/token';
+export const SPOTIFY_SEARCH_LIMIT = 10;
 
 type SpotifyArtist = { name: string };
 type SpotifyAlbum = { name: string; images?: { url: string }[] };
@@ -93,7 +94,9 @@ export class SpotifyMusicProvider implements MusicProvider {
   async search(query: string, cursor = '0'): Promise<ProviderPage<ProviderTrack>> {
     if (!query.trim()) return { items: [] };
     const response = await this.request(
-      `/search?type=track&limit=20&offset=${encodeURIComponent(cursor)}&q=${encodeURIComponent(query)}`,
+      `/search?type=track&limit=${SPOTIFY_SEARCH_LIMIT}&offset=${encodeURIComponent(
+        cursor,
+      )}&q=${encodeURIComponent(query)}`,
     );
     if (!response.ok) throw new Error(`Spotify search failed (${response.status})`);
     const body = (await response.json()) as {

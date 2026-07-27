@@ -24,7 +24,8 @@ The product-decision suite treats these as contracts:
 
 Test at 375 px and 1440 px with mouse and keyboard. Hard-refresh every route.
 Disconnect the network during search, expire a Spotify token, deny an avatar
-PUT, and reconnect SSE. Confirm retry and fallback copy stays actionable.
+PUT, and background then restore the polling tab. Confirm retry and fallback
+copy stays actionable.
 
 For privacy, use two browsers: anonymous, requester, accepted follower, blocked
 viewer, and owner. Repeat against public and private profiles.
