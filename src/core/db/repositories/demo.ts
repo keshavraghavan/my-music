@@ -64,9 +64,10 @@ export class DemoRepository {
       color: string;
       city: string;
       is_private: boolean;
+      avatar_url: string | null;
     }>(
       this.database,
-      sql`select user_id as id, display_name, handle, initials, color, city, is_private
+      sql`select user_id as id, display_name, handle, initials, color, city, is_private, avatar_url
           from profiles
           where user_id <> ${viewerId ?? 'juno'}
             and (${viewerId ?? null}::text is null or not exists (
@@ -86,6 +87,7 @@ export class DemoRepository {
       service: isSeedPersonId(row.id) ? PEOPLE[row.id].service : 'MyMusic',
       city: row.city,
       private: row.is_private,
+      avatarUrl: row.avatar_url,
     }));
   }
 
@@ -98,9 +100,10 @@ export class DemoRepository {
       color: string;
       city: string;
       is_private: boolean;
+      avatar_url: string | null;
     }>(
       this.database,
-      sql`select user_id as id, display_name, handle, initials, color, city, is_private
+      sql`select user_id as id, display_name, handle, initials, color, city, is_private, avatar_url
           from profiles where lower(handle) = lower(${handle}) and user_id <> 'juno' limit 1`,
     );
     const row = result[0];
@@ -114,6 +117,7 @@ export class DemoRepository {
       service: isSeedPersonId(row.id) ? PEOPLE[row.id].service : 'MyMusic',
       city: row.city,
       private: row.is_private,
+      avatarUrl: row.avatar_url,
     };
   }
 
@@ -161,9 +165,10 @@ export class DemoRepository {
         color: string;
         city: string;
         is_private: boolean;
+        avatar_url: string | null;
       }>(
         this.database,
-        sql`select display_name, handle, bio, initials, color, city, is_private
+        sql`select display_name, handle, bio, initials, color, city, is_private, avatar_url
             from profiles where user_id = ${viewerId} limit 1`,
       ),
       this.listPeople(viewerId),
@@ -179,10 +184,11 @@ export class DemoRepository {
         color: string;
         city: string;
         is_private: boolean;
+        avatar_url: string | null;
       }>(
         this.database,
         sql`select p.user_id as id, p.display_name, p.handle, p.initials, p.color, p.city,
-              p.is_private
+              p.is_private, p.avatar_url
             from follows f join profiles p on p.user_id = f.follower_id
             where f.followee_id = ${viewerId} and f.status = 'pending'
               and not exists (
@@ -205,9 +211,14 @@ export class DemoRepository {
         this.database,
         sql`select grid_density, now_playing_source from user_prefs where user_id = ${viewerId}`,
       ),
-      rows<{ recommendations: boolean; friend_activity: boolean; chart_updates: boolean }>(
+      rows<{
+        recommendations: boolean;
+        friend_activity: boolean;
+        chart_updates: boolean;
+        email_digest: boolean;
+      }>(
         this.database,
-        sql`select recommendations, friend_activity, chart_updates
+        sql`select recommendations, friend_activity, chart_updates, email_digest
             from notification_prefs where user_id = ${viewerId}`,
       ),
       rows<{ title: string; artist: string }>(
@@ -406,6 +417,7 @@ export class DemoRepository {
       service: isSeedPersonId(row.id) ? PEOPLE[row.id].service : 'MyMusic',
       city: row.city,
       private: row.is_private,
+      avatarUrl: row.avatar_url,
     }));
     const relations = Object.fromEntries(peopleList.map((person) => [person.id, 'none'])) as Record<
       PersonId,
@@ -534,6 +546,7 @@ export class DemoRepository {
         color: profile.color,
         city: profile.city,
         bio: profile.bio,
+        avatarUrl: profile.avatar_url,
       },
       people,
       catalog: catalog.length ? catalog : TRACK_POOL,
@@ -603,6 +616,7 @@ export class DemoRepository {
         recs: notificationPrefs?.recommendations ?? true,
         friendActivity: notificationPrefs?.friend_activity ?? true,
         chart: notificationPrefs?.chart_updates ?? false,
+        emailDigest: notificationPrefs?.email_digest ?? false,
       },
     };
   }
@@ -773,6 +787,6 @@ export function fallbackSnapshot(): AppState {
     },
     toast: null,
     accountForm: { name: ME.name, handle: ME.handle, bio: ME.bio },
-    notifPrefs: { recs: true, friendActivity: true, chart: false },
+    notifPrefs: { recs: true, friendActivity: true, chart: false, emailDigest: false },
   };
 }

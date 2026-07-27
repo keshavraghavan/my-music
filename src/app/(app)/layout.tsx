@@ -4,6 +4,9 @@ import { loadAppSnapshot } from '@/core/db/read-model';
 import { AppStateProvider } from '@/state/client-store';
 import { AppShell } from './AppShell';
 
+// Private snapshots are session-specific and must never enter a shared cache.
+export const dynamic = 'force-dynamic';
+
 /**
  * The authenticated boundary. Keeping the snapshot provider here prevents
  * private account data from being serialized into public pages.

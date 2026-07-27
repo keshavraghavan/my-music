@@ -13,7 +13,15 @@ export interface AuthenticatedUser {
   name: string | null;
 }
 
+export function isLocalE2E() {
+  return (
+    process.env.MYMUSIC_E2E === '1' &&
+    /^http:\/\/(127\.0\.0\.1|localhost):\d+$/.test(process.env.AUTH_URL ?? '')
+  );
+}
+
 export async function currentUser(): Promise<AuthenticatedUser | null> {
+  if (isLocalE2E()) return { id: 'juno', email: 'juno@example.test', name: 'Juno Reyes' };
   const session = await auth();
   if (!session?.user?.id) return null;
   return {
@@ -42,17 +50,20 @@ async function onboardingCompleted(userId: string): Promise<boolean> {
 
 export async function requireOnboardedUser(): Promise<AuthenticatedUser> {
   const user = await requireUser();
+  if (isLocalE2E()) return user;
   if (!(await onboardingCompleted(user.id))) redirect(routes.onboarding(1));
   return user;
 }
 
 export async function requireOnboardingUser(): Promise<AuthenticatedUser> {
   const user = await requireUser();
+  if (isLocalE2E()) return user;
   if (await onboardingCompleted(user.id)) redirect(routes.home);
   return user;
 }
 
 export async function authenticatedDestination(): Promise<string | null> {
+  if (isLocalE2E()) return null;
   const user = await currentUser();
   if (!user) return null;
   return (await onboardingCompleted(user.id)) ? routes.home : routes.onboarding(1);

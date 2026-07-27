@@ -22,6 +22,11 @@ beforeAll(async () => {
     'utf8',
   );
   await client.exec(phaseSixMigration.replaceAll('--> statement-breakpoint', ''));
+  const phaseSevenMigration = await readFile(
+    resolve(process.cwd(), 'drizzle/0002_clean_mindworm.sql'),
+    'utf8',
+  );
+  await client.exec(phaseSevenMigration.replaceAll('--> statement-breakpoint', ''));
 
   const database = drizzle(client);
   await database.insert(users).values([

@@ -2,6 +2,8 @@
 
 A retro music-social platform — your page, your charts, your friends' picks.
 
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fkeshavraghavan%2Fmy-music&env=DATABASE_URL%2CAUTH_SECRET&envDescription=Required%20database%20and%20session%20configuration&project-name=my-music)
+
 Build a personal listening page out of draggable modules, chart what you play,
 swap recommendations with friends, and keep a shared playlist running. Styled
 after transit-system print ephemera: cream paper, rule lines, and a monthly
@@ -62,6 +64,11 @@ npm run test:e2e   # Playwright, against the built output
 TypeScript runs strict. Unit tests use Vitest with Testing Library; end-to-end
 tests use Playwright against the production server. See
 [`CONTRIBUTING.md`](CONTRIBUTING.md).
+
+Template guides: [architecture](docs/ARCHITECTURE.md) ·
+[forking](docs/FORKING.md) · [writing a module](docs/MODULES.md) ·
+[writing a provider](docs/PROVIDERS.md) · [deployment](docs/DEPLOYMENT.md) ·
+[verification](docs/VERIFICATION.md)
 
 ## Screens
 

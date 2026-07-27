@@ -27,7 +27,7 @@ export type ComposeMode = 'recommend' | 'addTrack' | 'monthlyPick';
 export type ComposeTarget = 'wall' | 'playlist';
 export type NotificationKind = 'rec' | 'chart' | 'friend' | 'playlist';
 export type RecStatus = 'active' | 'hidden' | 'reported';
-export type NotifPrefKey = 'recs' | 'friendActivity' | 'chart';
+export type NotifPrefKey = 'recs' | 'friendActivity' | 'chart' | 'emailDigest';
 
 export type ConfirmKind =
   | ''
@@ -47,6 +47,7 @@ export interface Person {
   service: string;
   city: string;
   private: boolean;
+  avatarUrl?: string | null;
 }
 
 export interface ViewerProfile {
@@ -58,6 +59,7 @@ export interface ViewerProfile {
   color: string;
   city: string;
   bio: string;
+  avatarUrl?: string | null;
 }
 
 export interface Track {

@@ -23,6 +23,11 @@ beforeEach(async () => {
     'utf8',
   );
   await client.exec(migration.replaceAll('--> statement-breakpoint', ''));
+  const digestMigration = await readFile(
+    resolve(process.cwd(), 'drizzle/0002_clean_mindworm.sql'),
+    'utf8',
+  );
+  await client.exec(digestMigration.replaceAll('--> statement-breakpoint', ''));
   database = drizzle(client, { schema });
 
   await database.insert(users).values([
@@ -91,6 +96,15 @@ describe('GraphRepository', () => {
     await repository.follow('viewer', 'private');
     await repository.declineRequest('private', 'viewer');
     await expect(relation('viewer', 'private')).resolves.toBeUndefined();
+  });
+
+  it('keeps follows asymmetric and unfollow removes only the actor edge', async () => {
+    await repository.follow('viewer', 'public');
+    await repository.follow('public', 'viewer');
+    await repository.unfollow('viewer', 'public');
+
+    await expect(relation('viewer', 'public')).resolves.toBeUndefined();
+    await expect(relation('public', 'viewer')).resolves.toBe('accepted');
   });
 
   it('rejects request actions unless the actor owns the pending edge', async () => {

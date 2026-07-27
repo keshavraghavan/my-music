@@ -36,6 +36,7 @@ export function ProfileScreen({ person }: { person: Person }) {
           <div className={styles.header}>
             <Avatar
               initials={person.initials}
+              src={person.avatarUrl}
               size={52}
               color={person.color}
               css="font-family:'Tinos';font-size:18px"
@@ -125,6 +126,7 @@ function LockedProfile({ person, requested }: { person: Person; requested: boole
         <div className={styles.locked}>
           <Avatar
             initials={person.initials}
+            src={person.avatarUrl}
             size={64}
             color={person.color}
             css="font-family:'Tinos';font-size:22px;margin:0 auto 16px"

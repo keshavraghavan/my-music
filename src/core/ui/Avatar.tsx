@@ -1,11 +1,13 @@
 'use client';
 
+import Image from 'next/image';
 import sx from '@/sx';
 import styles from './Avatar.module.css';
 import { cx } from './cx';
 
 export interface AvatarProps {
   initials: string;
+  src?: string | null | undefined;
   /** Diameter in pixels. */
   size: number;
   color?: string | undefined;
@@ -22,6 +24,7 @@ export interface AvatarProps {
 
 export function Avatar({
   initials,
+  src,
   size,
   color,
   css,
@@ -43,7 +46,20 @@ export function Avatar({
         ...sx(css),
       }}
     >
-      {initials}
+      {src ? (
+        <Image
+          className={styles.image}
+          src={src}
+          alt=""
+          width={size}
+          height={size}
+          sizes={`${size}px`}
+          loading="lazy"
+          unoptimized
+        />
+      ) : (
+        initials
+      )}
     </span>
   );
 }

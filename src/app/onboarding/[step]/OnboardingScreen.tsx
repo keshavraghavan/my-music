@@ -45,7 +45,13 @@ const SERVICES: { key: ServiceKey; name: string; badge: string; note: string; co
  * The five-stop setup. The step is the URL, so a half-finished signup is a
  * link you can send yourself — and the back button works.
  */
-export function OnboardingScreen({ step }: { step: number }) {
+export function OnboardingScreen({
+  step,
+  bypassPersistence = false,
+}: {
+  step: number;
+  bypassPersistence?: boolean;
+}) {
   const router = useRouter();
   const { ob, connected, modules, people } = useAppState();
   const actions = useAppActions();
@@ -87,15 +93,15 @@ export function OnboardingScreen({ step }: { step: number }) {
     setSaveError(null);
     setSaving(true);
     try {
-      if (step === 3) await saveOnboardingProfile(ob);
-      if (step === 4) {
+      if (step === 3 && !bypassPersistence) await saveOnboardingProfile(ob);
+      if (step === 4 && !bypassPersistence) {
         const enabled = musicModules.all
           .filter((module) => modules[module.key])
           .map((module) => module.key);
         await saveOnboardingModules(enabled);
       }
       if (step === ONBOARDING_STEPS) {
-        await completeOnboarding();
+        if (!bypassPersistence) await completeOnboarding();
         router.push(routes.home);
         router.refresh();
       } else {

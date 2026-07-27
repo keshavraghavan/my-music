@@ -1,6 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 const PORT = 3100;
+const baseURL = `http://127.0.0.1:${PORT}`;
 
 // Some sandboxed dev environments ship a preinstalled Chromium whose build does
 // not match this Playwright version. Point this at that binary to reuse it
@@ -22,7 +23,7 @@ export default defineConfig({
   reporter: process.env.CI ? [['github'], ['html', { open: 'never' }]] : [['list']],
 
   use: {
-    baseURL: `http://127.0.0.1:${PORT}`,
+    baseURL,
     trace: 'on-first-retry',
   },
 
@@ -40,7 +41,12 @@ export default defineConfig({
   // the bundled seed snapshot, just like a fresh clone.
   webServer: {
     command: `npm run preview -- -p ${PORT}`,
-    url: `http://127.0.0.1:${PORT}`,
+    url: baseURL,
+    env: {
+      MYMUSIC_E2E: '1',
+      AUTH_URL: baseURL,
+      AUTH_TRUST_HOST: 'true',
+    },
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
   },

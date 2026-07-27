@@ -410,13 +410,19 @@ and deterministic play history. Apple Music implements the same seam but stays
 unavailable until a fork supplies its MusicKit developer and user tokens.
 **Ships:** real listening data drives the page.
 
-### Phase 7 — Realtime, polish, template docs
+### Phase 7 — Realtime, polish, template docs ✅ _done_
 
 SSE for notifications and Now Playing · avatar upload (presigned) · email
 digests · OG images and shareable profile URLs · perf pass · `docs/`:
 architecture, "fork this into your own social site", writing a module, writing
 a provider, deploy guide (Vercel + Neon/Supabase Postgres) · one-click deploy
 button.
+
+One authenticated SSE connection reconciles notification and Now Playing
+snapshots. Avatar uploads use short-lived S3/R2-compatible signed PUTs with
+account-path validation; email digests are idempotent and scheduled behind a
+cron secret. Profiles publish canonical metadata and generated OG cards. The
+template guides and an explicit product-decision test command now live in-repo.
 **Ships:** a template someone else can actually use.
 
 ---

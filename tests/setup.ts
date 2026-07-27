@@ -12,6 +12,17 @@ vi.mock('@/core/auth/actions', () => ({
   signInWithSpotify: vi.fn(),
 }));
 vi.mock('@/core/account/actions', () => ({ deleteMyAccount: vi.fn() }));
+vi.mock('@/core/moderation/actions', () => ({
+  reportRecommendation: vi.fn().mockResolvedValue({ ok: true }),
+}));
+vi.mock('@/core/notifications/actions', () => ({
+  updateNotificationPreference: vi.fn().mockResolvedValue({ ok: true }),
+  markNotificationRead: vi.fn().mockResolvedValue({ ok: true }),
+  markAllNotificationsRead: vi.fn().mockResolvedValue({ ok: true }),
+}));
+vi.mock('@/core/identity/actions', () => ({
+  completeAvatarUpload: vi.fn().mockResolvedValue({ ok: true }),
+}));
 vi.mock('@/core/graph/actions', () => ({
   followUser: vi
     .fn()
@@ -31,6 +42,7 @@ vi.mock('@/core/auth/onboarding-actions', () => ({
 }));
 vi.mock('@/core/auth/session', () => ({
   authenticatedDestination: vi.fn().mockResolvedValue(null),
+  isLocalE2E: vi.fn().mockReturnValue(false),
   currentUser: vi.fn().mockResolvedValue(null),
   requireOnboardedUser: vi.fn(),
   requireOnboardingUser: vi.fn(),
