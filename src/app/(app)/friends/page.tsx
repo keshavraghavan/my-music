@@ -19,7 +19,7 @@ import styles from './friends.module.css';
 
 /** Search the directory, follow people, and manage who you already follow. */
 export default function FriendsPage() {
-  const { relations, friendSearch, openFriendMenu, people } = useAppState();
+  const { relations, incomingFollowRequests, friendSearch, openFriendMenu, people } = useAppState();
   const actions = useAppActions();
 
   const query = friendSearch.trim().toLowerCase();
@@ -39,6 +39,46 @@ export default function FriendsPage() {
   return (
     <Page width="medium">
       <h1 className={styles.title}>Friends</h1>
+
+      {incomingFollowRequests.length > 0 && (
+        <section aria-labelledby="follow-requests">
+          <h2 id="follow-requests" className={styles.sectionLabel}>
+            FOLLOW REQUESTS ｜ {incomingFollowRequests.length}
+          </h2>
+          <ul className={styles.list}>
+            {incomingFollowRequests.map((person) => (
+              <li key={person.id} className={styles.row}>
+                <Avatar initials={person.initials} size={38} color={person.color} />
+                <div className={styles.person}>
+                  <TextLink
+                    variant="bare"
+                    href={routes.profile(person.handle)}
+                    className={styles.personLink}
+                  >
+                    {person.name}
+                  </TextLink>
+                  <div className={styles.handle}>@{person.handle}</div>
+                </div>
+                <div className={styles.requestActions}>
+                  <Button
+                    variant="outline"
+                    aria-label={`Decline follow request from ${person.name}`}
+                    onClick={() => actions.declineFollowRequest(person.id)}
+                  >
+                    DECLINE
+                  </Button>
+                  <Button
+                    aria-label={`Accept follow request from ${person.name}`}
+                    onClick={() => actions.acceptFollowRequest(person.id)}
+                  >
+                    ACCEPT
+                  </Button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <div className={styles.search}>
         <svg
@@ -132,7 +172,7 @@ export default function FriendsPage() {
                 <RowMenuTrigger />
                 <RowMenuItems>
                   <RowMenuItem onClick={() => actions.askRemoveFriend(friend.id)}>
-                    REMOVE FRIEND
+                    UNFOLLOW
                   </RowMenuItem>
                   <RowMenuItem tone="danger" onClick={() => actions.askBlockFriend(friend.id)}>
                     BLOCK
@@ -161,7 +201,7 @@ function DirectoryAction({ person }: { person: Person }) {
   const requested = relation === 'requested';
   const needsRequest = person.private && relation !== 'friend';
 
-  const label = needsRequest ? (requested ? 'REQUESTED' : 'REQUEST') : '+ ADD';
+  const label = needsRequest ? (requested ? 'CANCEL REQUEST' : 'REQUEST') : '+ ADD';
   const css = requested
     ? 'padding:8px 14px;letter-spacing:0.04em;border:1px solid #1E1B18;background:#1E1B18;color:#F2ECDF'
     : 'padding:8px 14px;letter-spacing:0.04em;border:1px solid rgba(30,27,24,0.4)';
@@ -170,16 +210,19 @@ function DirectoryAction({ person }: { person: Person }) {
     <Button
       variant="outline"
       css={css}
-      disabled={requested}
       aria-label={
         needsRequest
           ? requested
-            ? `Follow request sent to ${person.name}`
+            ? `Cancel follow request to ${person.name}`
             : `Request to follow ${person.name}`
           : `Add ${person.name}`
       }
       onClick={() =>
-        needsRequest ? actions.requestFollow(person.id) : actions.addFriend(person.id)
+        requested
+          ? actions.cancelFollowRequest(person.id)
+          : needsRequest
+            ? actions.requestFollow(person.id)
+            : actions.addFriend(person.id)
       }
     >
       {label}

@@ -12,6 +12,18 @@ vi.mock('@/core/auth/actions', () => ({
   signInWithSpotify: vi.fn(),
 }));
 vi.mock('@/core/account/actions', () => ({ deleteMyAccount: vi.fn() }));
+vi.mock('@/core/graph/actions', () => ({
+  followUser: vi
+    .fn()
+    .mockImplementation((target: string) =>
+      Promise.resolve({ ok: true, data: target === 'samo' ? 'pending' : 'accepted' }),
+    ),
+  cancelFollowRequest: vi.fn().mockResolvedValue({ ok: true }),
+  acceptFollowRequest: vi.fn().mockResolvedValue({ ok: true }),
+  declineFollowRequest: vi.fn().mockResolvedValue({ ok: true }),
+  unfollowUser: vi.fn().mockResolvedValue({ ok: true }),
+  blockUser: vi.fn().mockResolvedValue({ ok: true }),
+}));
 vi.mock('@/core/auth/onboarding-actions', () => ({
   completeOnboarding: vi.fn(),
   saveOnboardingModules: vi.fn(),

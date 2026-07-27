@@ -67,8 +67,18 @@
   padding: 0;
 }
 
+.requestActions {
+  display: flex;
+  gap: 8px;
+}
+
 @media (max-width: 480px) {
   .row {
     flex-wrap: wrap;
+  }
+
+  .requestActions {
+    width: 100%;
+    justify-content: flex-end;
   }
 }

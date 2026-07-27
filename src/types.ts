@@ -187,6 +187,7 @@ export interface AppState {
   isPrivateProfile: boolean;
 
   relations: Record<PersonId, Relation>;
+  incomingFollowRequests: Person[];
   friendSearch: string;
   openFriendMenu: PersonId | null;
 

@@ -10,8 +10,8 @@ import { SettingsScreen } from '@/app/(app)/settings/SettingsScreen';
 import { OnboardingScreen } from '@/app/onboarding/[step]/OnboardingScreen';
 import { LandingScreen } from '@/app/page';
 import { personByHandle } from '@/domains/music/data/people';
-import { AppStateProvider } from '@/state/client-store';
-import type { SettingsTab } from '@/types';
+import { AppStateProvider, INITIAL_STATE } from '@/state/client-store';
+import type { AppState, SettingsTab } from '@/types';
 import { testRouter } from '../mocks/next-navigation';
 
 /**
@@ -49,10 +49,10 @@ function TestApp() {
 }
 
 /** Renders the app at `path`, with the store fresh. */
-export function renderApp(path = '/') {
+export function renderApp(path = '/', initialState: AppState = INITIAL_STATE) {
   testRouter.reset(path);
   return render(
-    <AppStateProvider>
+    <AppStateProvider initialState={initialState}>
       <TestApp />
     </AppStateProvider>,
   );

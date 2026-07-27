@@ -11,6 +11,14 @@ import {
 } from 'react';
 import { endSentence } from '@/core/text';
 import {
+  acceptFollowRequest,
+  blockUser,
+  cancelFollowRequest,
+  declineFollowRequest,
+  followUser,
+  unfollowUser,
+} from '@/core/graph/actions';
+import {
   FEED_ITEMS,
   monthlyReceipt,
   NOW_PLAYING,
@@ -19,7 +27,7 @@ import {
   TOP_ALBUMS,
   TOP_SONGS,
 } from '@/domains/music/data/listening';
-import { isHandleTaken, isPersonId, ME, PEOPLE } from '@/domains/music/data/people';
+import { isHandleTaken, ME, PEOPLE } from '@/domains/music/data/people';
 import { filterTracks, TRACK_POOL } from '@/domains/music/data/tracks';
 import type {
   AppState,
@@ -79,6 +87,7 @@ export const INITIAL_STATE: AppState = {
   isPrivateProfile: false,
 
   relations: { theok: 'friend', marisolv: 'friend', priyad: 'friend', devonp: 'friend', irisn: 'friend', cassr: 'friend', samo: 'none', wrenl: 'none' },
+  incomingFollowRequests: [],
   friendSearch: '',
   openFriendMenu: null,
 
@@ -141,6 +150,9 @@ export interface AppActions {
   // friends
   addFriend: (id: PersonId) => void;
   requestFollow: (id: PersonId) => void;
+  cancelFollowRequest: (id: PersonId) => void;
+  acceptFollowRequest: (id: PersonId) => void;
+  declineFollowRequest: (id: PersonId) => void;
   setRelation: (id: PersonId, relation: Relation) => void;
   setFriendSearch: (query: string) => void;
   toggleFriendMenu: (id: PersonId) => void;
@@ -217,6 +229,7 @@ export function AppStateProvider({
 
     const setRelation = (id: PersonId, relation: Relation) =>
       setState((s) => ({ ...s, relations: { ...s.relations, [id]: relation } }));
+    const showSaveError = () => showToast('That change could not be saved. Please try again.');
 
     const closeCompose = () => setState((s) => ({ ...s, compose: { ...s.compose, open: false } }));
 
@@ -256,10 +269,108 @@ export function AppStateProvider({
 
       setRelation,
       addFriend: (id) => {
+        const previous = latest.current.relations[id];
         setRelation(id, 'friend');
         showToast(endSentence(`You're now friends with ${latest.current.people[id].name}`));
+        void followUser(id)
+          .then((result) => {
+            if (!result.ok) {
+              setRelation(id, previous);
+              showToast(result.error);
+            } else if (result.data === 'pending') {
+              setRelation(id, 'requested');
+            }
+          })
+          .catch(() => {
+            setRelation(id, previous);
+            showSaveError();
+          });
       },
-      requestFollow: (id) => setRelation(id, 'requested'),
+      requestFollow: (id) => {
+        const previous = latest.current.relations[id];
+        setRelation(id, 'requested');
+        void followUser(id)
+          .then((result) => {
+            if (!result.ok) {
+              setRelation(id, previous);
+              showToast(result.error);
+            } else {
+              setRelation(id, result.data === 'accepted' ? 'friend' : 'requested');
+            }
+          })
+          .catch(() => {
+            setRelation(id, previous);
+            showSaveError();
+          });
+      },
+      cancelFollowRequest: (id) => {
+        setRelation(id, 'none');
+        void cancelFollowRequest(id)
+          .then((result) => {
+            if (!result.ok) {
+              setRelation(id, 'requested');
+              showToast(result.error);
+            }
+          })
+          .catch(() => {
+            setRelation(id, 'requested');
+            showSaveError();
+          });
+      },
+      acceptFollowRequest: (id) => {
+        const request = latest.current.incomingFollowRequests.find((person) => person.id === id);
+        setState((state) => ({
+          ...state,
+          incomingFollowRequests: state.incomingFollowRequests.filter((person) => person.id !== id),
+        }));
+        const restoreRequest = () => {
+          if (request) {
+            setState((state) => ({
+              ...state,
+              incomingFollowRequests: [...state.incomingFollowRequests, request],
+            }));
+          }
+        };
+        void acceptFollowRequest(id)
+          .then((result) => {
+            if (!result.ok) {
+              restoreRequest();
+              showToast(result.error);
+            } else if (request) {
+              showToast(`Accepted ${request.name}'s follow request.`);
+            }
+          })
+          .catch(() => {
+            restoreRequest();
+            showSaveError();
+          });
+      },
+      declineFollowRequest: (id) => {
+        const request = latest.current.incomingFollowRequests.find((person) => person.id === id);
+        setState((state) => ({
+          ...state,
+          incomingFollowRequests: state.incomingFollowRequests.filter((person) => person.id !== id),
+        }));
+        const restoreRequest = () => {
+          if (request) {
+            setState((state) => ({
+              ...state,
+              incomingFollowRequests: [...state.incomingFollowRequests, request],
+            }));
+          }
+        };
+        void declineFollowRequest(id)
+          .then((result) => {
+            if (!result.ok) {
+              restoreRequest();
+              showToast(result.error);
+            }
+          })
+          .catch(() => {
+            restoreRequest();
+            showSaveError();
+          });
+      },
       setFriendSearch: (friendSearch) => setState((s) => ({ ...s, friendSearch })),
       toggleFriendMenu: (id) =>
         setState((s) => ({ ...s, openFriendMenu: s.openFriendMenu === id ? null : id })),
@@ -271,9 +382,9 @@ export function AppStateProvider({
           confirm: {
             open: true,
             kind: 'remove',
-            title: 'Remove friend?',
-            message: `${latest.current.people[id].name} will no longer see your page updates, and you won't see theirs.`,
-            confirmLabel: 'REMOVE',
+            title: 'Unfollow this person?',
+            message: `You will stop seeing ${latest.current.people[id].name}'s updates. Their follow of you is unchanged.`,
+            confirmLabel: 'UNFOLLOW',
             payload: id,
           },
         })),
@@ -536,15 +647,41 @@ export function AppStateProvider({
         const payload = confirm.payload;
         switch (confirm.kind) {
           case 'remove':
-            if (payload && isPersonId(payload)) {
-              setRelation(payload, 'none');
-              showToast(endSentence(`Removed ${latest.current.people[payload].name} as a friend`));
+            if (payload && latest.current.people[payload as PersonId]) {
+              const personId = payload as PersonId;
+              const previous = latest.current.relations[personId];
+              setRelation(personId, 'none');
+              showToast(endSentence(`Unfollowed ${latest.current.people[personId].name}`));
+              void unfollowUser(personId)
+                .then((result) => {
+                  if (!result.ok) {
+                    setRelation(personId, previous);
+                    showToast(result.error);
+                  }
+                })
+                .catch(() => {
+                  setRelation(personId, previous);
+                  showSaveError();
+                });
             }
             break;
           case 'block':
-            if (payload && isPersonId(payload)) {
-              setRelation(payload, 'blocked');
-              showToast(endSentence(`Blocked ${latest.current.people[payload].name}`));
+            if (payload && latest.current.people[payload as PersonId]) {
+              const personId = payload as PersonId;
+              const previous = latest.current.relations[personId];
+              setRelation(personId, 'blocked');
+              showToast(endSentence(`Blocked ${latest.current.people[personId].name}`));
+              void blockUser(personId)
+                .then((result) => {
+                  if (!result.ok) {
+                    setRelation(personId, previous);
+                    showToast(result.error);
+                  }
+                })
+                .catch(() => {
+                  setRelation(personId, previous);
+                  showSaveError();
+                });
             }
             break;
           case 'report-rec':
